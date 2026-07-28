@@ -37,17 +37,42 @@ body {
 html.embed-mode,
 html.embed-mode body.embed-body {
   height: 100%;
-  overflow: hidden;
 }
 
 html.embed-mode {
   --plugin-height: 600px;
 }
 
+/* Plugin height from Wrangler PLUGIN_INITIAL_HEIGHT (no inline styles). */
+html.embed-mode.embed-h-200 { --plugin-height: 200px; }
+html.embed-mode.embed-h-250 { --plugin-height: 250px; }
+html.embed-mode.embed-h-300 { --plugin-height: 300px; }
+html.embed-mode.embed-h-350 { --plugin-height: 350px; }
+html.embed-mode.embed-h-400 { --plugin-height: 400px; }
+html.embed-mode.embed-h-450 { --plugin-height: 450px; }
+html.embed-mode.embed-h-500 { --plugin-height: 500px; }
+html.embed-mode.embed-h-550 { --plugin-height: 550px; }
+html.embed-mode.embed-h-600 { --plugin-height: 600px; }
+html.embed-mode.embed-h-650 { --plugin-height: 650px; }
+html.embed-mode.embed-h-700 { --plugin-height: 700px; }
+html.embed-mode.embed-h-750 { --plugin-height: 750px; }
+html.embed-mode.embed-h-800 { --plugin-height: 800px; }
+html.embed-mode.embed-h-850 { --plugin-height: 850px; }
+html.embed-mode.embed-h-900 { --plugin-height: 900px; }
+html.embed-mode.embed-h-950 { --plugin-height: 950px; }
+html.embed-mode.embed-h-1000 { --plugin-height: 1000px; }
+html.embed-mode.embed-h-1050 { --plugin-height: 1050px; }
+html.embed-mode.embed-h-1100 { --plugin-height: 1100px; }
+html.embed-mode.embed-h-1150 { --plugin-height: 1150px; }
+html.embed-mode.embed-h-1200 { --plugin-height: 1200px; }
+
 .embed-mode .app-shell {
   height: 100%;
   min-height: 0;
   max-height: var(--plugin-height);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 0 0.75rem;
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
@@ -55,6 +80,9 @@ html.embed-mode {
 .embed-mode .app-header {
   padding: 0.6rem 0;
   flex-shrink: 0;
+  position: relative;
+  z-index: 3;
+  background: var(--bg);
 }
 
 .embed-mode .brand-sub {
@@ -87,6 +115,11 @@ html.embed-mode {
   padding: 0.35rem 0;
   flex-shrink: 0;
   gap: 0.15rem;
+  position: relative;
+  z-index: 3;
+  background: var(--bg);
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
 }
 
 .embed-mode .tab-link {
@@ -101,6 +134,8 @@ html.embed-mode {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   padding: 0.5rem 0 0.75rem;
+  position: relative;
+  z-index: 1;
 }
 
 .embed-mode .view-grid {
@@ -124,12 +159,12 @@ html.embed-mode {
   font-size: 1.35rem;
 }
 
-.embed-mode .health-ring {
+.embed-mode .health-ring-wrap {
   width: 44px;
   height: 44px;
 }
 
-.embed-mode .health-ring.large {
+.embed-mode .health-ring-wrap.large {
   width: 88px;
   height: 88px;
 }
@@ -226,6 +261,9 @@ html.embed-mode {
   padding: 0.75rem 0;
   overflow-x: auto;
   scrollbar-width: none;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
 }
 
 .tab-nav::-webkit-scrollbar {
@@ -259,6 +297,19 @@ html.embed-mode {
 .tab-icon {
   font-size: 0.7rem;
   opacity: 0.7;
+}
+
+/* Client-side tab panels */
+.tab-panels {
+  display: block;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
 }
 
 /* Mobile / narrow card-face (Banno mobile ~264–336px wide) */
@@ -353,10 +404,19 @@ html.embed-mode {
 .logout-link {
   color: var(--accent);
   text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
 }
 
 .logout-link:hover {
   text-decoration: underline;
+}
+
+button.logout-link {
+  display: inline;
 }
 
 .embed-logout {
@@ -443,46 +503,45 @@ html.embed-mode {
   color: var(--text-muted);
 }
 
-/* Health ring */
-.health-ring {
+/* Health ring (SVG — no inline CSS) */
+.health-ring-wrap {
+  position: relative;
   width: 56px;
   height: 56px;
-  border-radius: 50%;
-  background: conic-gradient(
-    var(--positive) calc(var(--score) * 1%),
-    var(--bg-elevated) 0
-  );
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
 }
 
-.health-ring::before {
-  content: '';
-  position: absolute;
-  inset: 6px;
-  background: var(--bg-card);
-  border-radius: 50%;
-}
-
-.health-ring.large {
+.health-ring-wrap.large {
   width: 120px;
   height: 120px;
   margin: 0 auto 1rem;
 }
 
-.health-ring.large::before {
-  inset: 10px;
+.health-ring-svg {
+  position: absolute;
+  inset: 0;
+}
+
+.health-ring-track {
+  stroke: var(--bg-elevated);
+}
+
+.health-ring-progress {
+  stroke: var(--positive);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.3s ease;
 }
 
 .health-value {
   position: relative;
   font-weight: 700;
   font-size: 1rem;
+  z-index: 1;
 }
 
-.health-ring.large .health-value {
+.health-ring-wrap.large .health-value {
   font-size: 1.75rem;
 }
 
@@ -588,11 +647,35 @@ html.embed-mode {
   overflow: hidden;
 }
 
-.bar-fill {
-  height: 100%;
-  border-radius: 3px;
+.bar-svg,
+.goal-bar-svg {
+  display: block;
+  width: 100%;
+  height: 6px;
+}
+
+.goal-bar-svg {
+  height: 8px;
+}
+
+.bar-fill-rect {
   transition: width 0.3s ease;
 }
+
+.goal-bar-fill {
+  fill: var(--accent);
+}
+
+.cat-groceries { fill: #10b981; background: #10b981; color: #10b981; }
+.cat-dining { fill: #f59e0b; background: #f59e0b; color: #f59e0b; }
+.cat-transportation { fill: #3b82f6; background: #3b82f6; color: #3b82f6; }
+.cat-shopping { fill: #8b5cf6; background: #8b5cf6; color: #8b5cf6; }
+.cat-subscriptions { fill: #ec4899; background: #ec4899; color: #ec4899; }
+.cat-utilities { fill: #06b6d4; background: #06b6d4; color: #06b6d4; }
+.cat-income { fill: #22c55e; background: #22c55e; color: #22c55e; }
+.cat-transfers { fill: #64748b; background: #64748b; color: #64748b; }
+.cat-cash { fill: #94a3b8; background: #94a3b8; color: #94a3b8; }
+.cat-other { fill: #cbd5e1; background: #cbd5e1; color: #cbd5e1; }
 
 /* Account tiles */
 .account-grid {
@@ -728,9 +811,19 @@ html.embed-mode {
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
   font-size: 0.75rem;
-  background: color-mix(in srgb, var(--pill-color) 20%, transparent);
-  color: var(--pill-color);
+  background: color-mix(in srgb, currentColor 20%, transparent);
 }
+
+.category-pill.cat-groceries { color: #10b981; }
+.category-pill.cat-dining { color: #f59e0b; }
+.category-pill.cat-transportation { color: #3b82f6; }
+.category-pill.cat-shopping { color: #8b5cf6; }
+.category-pill.cat-subscriptions { color: #ec4899; }
+.category-pill.cat-utilities { color: #06b6d4; }
+.category-pill.cat-income { color: #22c55e; }
+.category-pill.cat-transfers { color: #64748b; }
+.category-pill.cat-cash { color: #94a3b8; }
+.category-pill.cat-other { color: #cbd5e1; }
 
 .tx-desc-full {
   display: block;
@@ -767,6 +860,17 @@ code {
   height: 10px;
   border-radius: 50%;
 }
+
+.legend-dot.cat-groceries { background: #10b981; }
+.legend-dot.cat-dining { background: #f59e0b; }
+.legend-dot.cat-transportation { background: #3b82f6; }
+.legend-dot.cat-shopping { background: #8b5cf6; }
+.legend-dot.cat-subscriptions { background: #ec4899; }
+.legend-dot.cat-utilities { background: #06b6d4; }
+.legend-dot.cat-income { background: #22c55e; }
+.legend-dot.cat-transfers { background: #64748b; }
+.legend-dot.cat-cash { background: #94a3b8; }
+.legend-dot.cat-other { background: #cbd5e1; }
 
 .legend-label {
   color: var(--text);
@@ -881,11 +985,9 @@ code {
   margin-bottom: 0.5rem;
 }
 
-.goal-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), #6366f1);
-  border-radius: 4px;
-  transition: width 0.3s;
+.goal-progress .goal-bar-svg {
+  width: 100%;
+  height: 8px;
 }
 
 .goal-amounts {

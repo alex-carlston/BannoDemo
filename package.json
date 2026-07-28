@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "wrangler dev --local",
     "dev:banno": "wrangler dev --remote",
-    "deploy": "wrangler deploy --minify",
+    "deploy": "wrangler deploy --minify && wrangler d1 migrations apply banno-pulse-goals --remote",
+    "deploy:ci": "bash ./scripts/deploy-ci.sh",
     "setup:win": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/setup.ps1",
     "deploy:win": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/deploy.ps1",
     "setup:mac": "bash ./scripts/setup.sh",
@@ -21,6 +22,6 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260722.1",
     "typescript": "^5.9.3",
-    "wrangler": "^4.4.0"
+    "wrangler": "^4.45.0"
   }
 }

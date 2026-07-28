@@ -19,7 +19,9 @@ import type { HonoEnv } from './types'
 
 const app = new Hono<HonoEnv>()
 
+/** Longest prefix first — `/callback/plugin` must win over `/callback`. */
 const RATE_LIMITS: Array<{ prefix: string; max: number; windowSec: number }> = [
+  { prefix: '/callback/plugin', max: 20, windowSec: 60 },
   { prefix: '/auth/', max: 20, windowSec: 60 },
   { prefix: '/callback', max: 30, windowSec: 60 },
   { prefix: '/api/', max: 40, windowSec: 60 },
@@ -27,6 +29,23 @@ const RATE_LIMITS: Array<{ prefix: string; max: number; windowSec: number }> = [
 
 const envUriSource: ContentSecurityPolicyOptionHandler = (c) =>
   ((c.env as HonoEnv['Bindings']).ENV_URI || 'https://digital.garden-fi.com').replace(/\/$/, '')
+
+function buildAssetCsp(envUri: string): string {
+  const frame = envUri.replace(/\/$/, '')
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "script-src 'self'",
+    "style-src 'self' https://fonts.googleapis.com",
+    "img-src 'self' https: data:",
+    "font-src 'self' https://fonts.gstatic.com",
+    "connect-src 'self'",
+    `frame-ancestors 'self' ${frame}`,
+    `form-action 'self' ${frame}`,
+    `frame-src 'self' ${frame}`,
+    'upgrade-insecure-requests',
+  ].join('; ')
+}
 
 app.use('*', logger())
 app.use('*', requestId())
@@ -43,7 +62,7 @@ app.use(
       defaultSrc: ["'self'"],
       baseUri: ["'self'"],
       scriptSrc: ["'self'"],
-      styleSrc: ["'self'", 'https://fonts.googleapis.com', "'unsafe-inline'"],
+      styleSrc: ["'self'", 'https://fonts.googleapis.com'],
       imgSrc: ["'self'", 'https:', 'data:'],
       connectSrc: ["'self'"],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
@@ -98,15 +117,26 @@ app.use('*', async (c, next) => {
   }
 
   const clientIP = c.req.header('CF-Connecting-IP') || 'unknown'
-  const key = `ratelimit:${rule.prefix}:${clientIP}`
+  const nowSec = Math.floor(Date.now() / 1000)
+  const windowId = Math.floor(nowSec / rule.windowSec)
+  const key = `ratelimit:${rule.prefix}:${clientIP}:${windowId}`
 
   try {
     const current = await c.env.SESSIONS_KV.get(key)
-    const count = current ? parseInt(current, 10) : 0
+    let count = 0
+    if (current !== null) {
+      count = parseInt(current, 10)
+      if (!Number.isFinite(count) || count < 0) {
+        // Corrupt counter — fail closed
+        return c.text(SAFE_RATE_LIMIT, 503, { 'Retry-After': '60' })
+      }
+    }
     if (count >= rule.max) {
       return c.text(SAFE_RATE_LIMIT, 429, { 'Retry-After': String(rule.windowSec) })
     }
-    await c.env.SESSIONS_KV.put(key, String(count + 1), { expirationTtl: rule.windowSec })
+    await c.env.SESSIONS_KV.put(key, String(count + 1), {
+      expirationTtl: rule.windowSec + 5,
+    })
   } catch (err) {
     logSafeError('rate_limit', err, { requestId: c.get('requestId') })
     return c.text(SAFE_RATE_LIMIT, 503, { 'Retry-After': '60' })
@@ -151,7 +181,6 @@ app.use(
   ))
 )
 
-// Banno Consumer API aggregation on the plugin dashboard
 app.use(
   '/callback/plugin',
   timeout(
@@ -171,6 +200,7 @@ app.notFound(async (c) => {
   if (c.env.ASSETS) {
     const assetResponse = await c.env.ASSETS.fetch(c.req.raw)
     if (assetResponse.status !== 404) {
+      const envUri = (c.env.ENV_URI || 'https://digital.garden-fi.com').replace(/\/$/, '')
       const headers = new Headers(assetResponse.headers)
       headers.set('X-Content-Type-Options', 'nosniff')
       headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
@@ -178,6 +208,7 @@ app.notFound(async (c) => {
         'Strict-Transport-Security',
         'max-age=31536000; includeSubDomains; preload'
       )
+      headers.set('Content-Security-Policy', buildAssetCsp(envUri))
       return new Response(assetResponse.body, {
         status: assetResponse.status,
         statusText: assetResponse.statusText,

@@ -26,6 +26,10 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $RepoRoot
 
+# Non-interactive when CI or API-token auth is present
+if ($env:CI -or $env:CLOUDFLARE_API_TOKEN) {
+  $SkipAuthCheck = $true
+}
 function Write-Step([string]$Message) {
   Write-Host ""
   Write-Host "==> $Message" -ForegroundColor Cyan
@@ -101,7 +105,7 @@ if (-not $SkipAuthCheck) {
   }
 }
 
-Write-Step "Deploying Worker (wrangler deploy --minify)"
+Write-Step "Deploying Worker + D1 migrations"
 npm run deploy
 if ($LASTEXITCODE -ne 0) {
   Write-Fail "Deploy failed"

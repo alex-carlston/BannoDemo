@@ -149,7 +149,6 @@ show_next_steps() {
   cat <<'EOF'
 
 1) Fill .dev.vars (CLIENT_ID, CLIENT_SECRET, ENV_URI, secrets)
-   Local redirect: http://localhost:8787/callback/plugin
 
 2) Jack Henry dashboard (test user, plugin, external app):
      https://jackhenry.dev/open-api-docs/getting-started/
@@ -157,19 +156,16 @@ show_next_steps() {
 3) Cloudflare MCP in Cursor:
      docs/setup-mcp.md
 
-4) Run locally:
-     npm run dev
-
-5) First-time Cloudflare resources (when you deploy):
-     npx wrangler kv namespace create SESSIONS_KV
-     npx wrangler d1 create banno-pulse-goals
-     npx wrangler d1 migrations apply banno-pulse-goals --remote
+4) Deploy (auto-provisions KV + D1, applies migrations):
+     ./scripts/deploy.sh
+     # first time, set secrets:
      npx wrangler secret put CLIENT_SECRET
      npx wrangler secret put SESSION_ENC_SECRET
      npx wrangler secret put COOKIE_SIGNING_SECRET
 
-6) Deploy:
-     ./scripts/deploy.sh
+5) Optional — local:
+     npm run dev
+     # redirect: http://localhost:8787/callback/plugin
 
 Guides: README.md · docs/setup-banno.md · docs/setup-cloudflare.md · docs/setup-mcp.md
 

@@ -9,6 +9,11 @@ cd "$REPO_ROOT"
 REFRESH_AUTH=0
 SKIP_AUTH_CHECK=0
 
+# Non-interactive when CI or API-token auth is present
+if [[ -n "${CI:-}" || -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+  SKIP_AUTH_CHECK=1
+fi
+
 for arg in "$@"; do
   case "$arg" in
     --refresh-auth) REFRESH_AUTH=1 ;;
@@ -19,6 +24,10 @@ Usage: ./scripts/deploy.sh [--refresh-auth] [--skip-auth-check]
 
   --refresh-auth      Force wrangler logout + login before deploy
   --skip-auth-check   Skip interactive account confirmation
+
+For CI / Docker (API token, no prompts), use:
+  ./scripts/deploy-ci.sh
+  # or: npm run deploy:ci
 EOF
       exit 0
       ;;
@@ -28,6 +37,11 @@ EOF
       ;;
   esac
 done
+
+# Prefer the dedicated CI path when an API token is set (no interactive login).
+if [[ -n "${CLOUDFLARE_API_TOKEN:-}" && "$REFRESH_AUTH" -eq 0 ]]; then
+  exec "$REPO_ROOT/scripts/deploy-ci.sh"
+fi
 
 step() { printf '\n==> %s\n' "$1"; }
 ok()   { printf '    OK  %s\n' "$1"; }
@@ -82,7 +96,7 @@ if [[ "$SKIP_AUTH_CHECK" -eq 0 ]]; then
   fi
 fi
 
-step "Deploying Worker (wrangler deploy --minify)"
+step "Deploying Worker + D1 migrations"
 npm run deploy
 
 ok "Deploy finished"

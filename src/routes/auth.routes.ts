@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { getSignedCookie, deleteCookie } from 'hono/cookie'
-import { initiateAuth, revokeRefreshToken } from '../services/auth.service'
 import { SessionService } from '../services/session.service'
-import { handleOAuthCallback } from '../utils/auth'
+import { handleOAuthCallback, requireSecrets } from '../utils/auth'
+import { initiateAuth } from '../services/auth.service'
 import { SAFE_AUTH_ERROR, logSafeError } from '../utils/errors'
 import type { HonoEnv } from '../types'
 
@@ -19,24 +19,24 @@ export function createAuthRoutes(): Hono<HonoEnv> {
     }
   })
 
-  router.get('/logout', async (c) => {
-    const cookieSecret = c.env.COOKIE_SIGNING_SECRET
-    if (cookieSecret && c.env.SESSIONS_KV && c.env.SESSION_ENC_SECRET) {
-      const sessionId = await getSignedCookie(c, cookieSecret, '__Secure-session_id')
-      if (sessionId) {
-        const sessionService = new SessionService(
-          c.env.SESSIONS_KV,
-          c.env.SESSION_ENC_SECRET,
-          c.env
-        )
-        const session = await sessionService.getSession(sessionId)
-        if (session) {
-          await revokeRefreshToken(session.refreshToken, c.env)
-          await sessionService.deleteUserSession(session.userId)
-        }
-        await sessionService.deleteSession(sessionId)
+  /** GET must not log out (CSRF). */
+  router.get('/logout', (c) => c.redirect('/'))
+
+  router.post('/logout', async (c) => {
+    try {
+      const { sessionEnc, cookieSign } = requireSecrets(c.env)
+      if (!c.env.SESSIONS_KV) {
+        return c.redirect('/')
       }
+      const sessionId = await getSignedCookie(c, cookieSign, '__Secure-session_id')
+      if (sessionId) {
+        const sessionService = new SessionService(c.env.SESSIONS_KV, sessionEnc, c.env)
+        await sessionService.destroySession(sessionId)
+      }
+    } catch (err) {
+      logSafeError('auth.logout', err, { requestId: c.get('requestId') })
     }
+
     deleteCookie(c, '__Secure-session_id', {
       secure: true,
       path: '/',

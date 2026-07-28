@@ -23,8 +23,8 @@ Official Jack Henry setup for accounts / test user / plugin / external app:
 | **5** | Turn on Cloudflare MCP inside Cursor |
 | **6** | Run the setup script (logs you into Cloudflare) |
 | **7** | Put your Banno credentials in `.dev.vars` |
-| **8** | Run locally (`localhost`) and test in Garden / Banno |
-| **9** | Deploy to Cloudflare when you want a public URL |
+| **8** | Deploy to Cloudflare (public Worker URL) |
+| **9** | *(Optional)* Run locally on `localhost` |
 
 Windows commands are shown first. Mac notes are under each step when they differ.
 
@@ -276,36 +276,9 @@ Never commit `.dev.vars`.
 
 ---
 
-## 8) Run locally (works with Banno localhost)
+## 8) Deploy to Cloudflare (public URL)
 
-```powershell
-npm run dev
-```
-
-Open [http://localhost:8787](http://localhost:8787).
-
-Point your Jack Henry **external application** redirect URI at:
-
-`http://localhost:8787/callback/plugin`
-
-Then open Garden / Banno with your test user and launch the plugin. Localhost is a supported local-development path per Jack Henry’s docs.
-
----
-
-## 9) Deploy to Cloudflare (public URL)
-
-### One-time Cloudflare resources (your account)
-
-```powershell
-npx wrangler login
-npx wrangler whoami
-
-npx wrangler kv namespace create SESSIONS_KV
-npx wrangler d1 create banno-pulse-goals
-npx wrangler d1 migrations apply banno-pulse-goals --remote
-```
-
-Paste the returned **KV id** and **D1 database_id** into `wrangler.jsonc`.
+KV (`SESSIONS_KV`) and D1 (`GOALS_DB` / `banno-pulse-goals`) are declared by **name** in `wrangler.jsonc`. On deploy, Wrangler creates and links them automatically — no `kv namespace create`, no pasting IDs.
 
 Set production secrets (paste when prompted):
 
@@ -339,10 +312,31 @@ Or:
 npm run deploy
 ```
 
-Copy the `https://….workers.dev` URL from the output. Add that same `…/callback/plugin` URL as a redirect URI in the Jack Henry dashboard (you can keep localhost as another URI for local work).
+That runs `wrangler deploy` (auto-provisions bindings) and then applies D1 migrations remotely.
+
+Copy the `https://….workers.dev` URL from the output. Add that same `…/callback/plugin` URL as a redirect URI in the Jack Henry dashboard.
+
+### Other deploy paths (optional)
+
+- **Local Docker toolbox** — same Cloudflare deploy from your machine, Node/Wrangler inside a container (`docker compose run --rm deploy`). Does **not** require GitHub.
+- **Workers Builds** — connect this repo in the Cloudflare dashboard (**Worker → Settings → Builds**). Cloudflare watches GitHub and deploys on push. Set deploy command to `npm run deploy` so D1 migrations run. This is the usual “auto-deploy from Git” path.
+- **GitHub Actions** — optional alternative if you are *not* using Workers Builds. Needs `CLOUDFLARE_API_TOKEN` (and usually `CLOUDFLARE_ACCOUNT_ID`) as repo secrets.
+
+Do not enable Workers Builds **and** GitHub Actions on the same branch (double deploys). Full comparison: [docs/setup-cloudflare.md](./docs/setup-cloudflare.md) §5.
 
 More Cloudflare detail: [docs/setup-cloudflare.md](./docs/setup-cloudflare.md)
 
+---
+
+## 9) Optional: run locally
+
+Skip this if you are only testing against the deployed Worker.
+
+```powershell
+npm run dev
+```
+
+Open [http://localhost:8787](http://localhost:8787). Point a Jack Henry redirect URI at `http://localhost:8787/callback/plugin` if you want Garden to hit localhost (Jack Henry allows that for local development).
 ---
 
 ## Command cheat sheet
@@ -355,6 +349,9 @@ More Cloudflare detail: [docs/setup-cloudflare.md](./docs/setup-cloudflare.md)
 | Local app | `npm run dev` | same |
 | Deploy | `.\scripts\deploy.ps1` | `./scripts/deploy.sh` |
 | Deploy (no prompts) | `npm run deploy` | same |
+| Deploy via API token | `npm run deploy:ci` | same |
+| Deploy via Docker (local toolbox) | `docker compose run --rm deploy` | same |
+| Auto-deploy from Git | Cloudflare dashboard → Worker → Builds (Workers Builds) | same |
 | Live remote dev URL | `npm run dev:banno` | same |
 
 ---
@@ -378,10 +375,10 @@ Build your own UI on the kit: [docs/plugin-starter.md](./docs/plugin-starter.md)
 | [Jack Henry Getting Started](https://jackhenry.dev/open-api-docs/getting-started/) | Developer account, test user, plugin, external app |
 | [docs/setup-banno.md](./docs/setup-banno.md) | Redirect URIs + wiring Pulse to Garden |
 | [docs/setup-mcp.md](./docs/setup-mcp.md) | Cloudflare MCP in Cursor |
-| [docs/setup-cloudflare.md](./docs/setup-cloudflare.md) | KV, D1, secrets, deploy |
+| [docs/setup-cloudflare.md](./docs/setup-cloudflare.md) | KV, D1, secrets, deploy paths (local, Docker, Workers Builds, Actions) |
 | [docs/setup-node.md](./docs/setup-node.md) | Node install troubleshooting |
 | [architecture.md](./architecture.md) | How the system fits together |
-| [security.md](./security.md) | Auth / session posture |
+| [security.md](./security.md) | How security controls work |
 
 ## License
 

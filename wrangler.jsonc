@@ -16,18 +16,17 @@
     "ENVIRONMENT": "production",
     "PLUGIN_INITIAL_HEIGHT": "600"
   },
+  // Binding names only — Wrangler provisions KV/D1 on deploy (no manual create / paste IDs).
+  // After first deploy, Wrangler may write resource IDs back into this file; that is fine.
   "kv_namespaces": [
     {
-      "binding": "SESSIONS_KV",
-      "id": "c683e833a1614d8e93f4f0fcb9aef04c",
-      "preview_id": "local-banno-pulse-sessions"
+      "binding": "SESSIONS_KV"
     }
   ],
   "d1_databases": [
     {
       "binding": "GOALS_DB",
       "database_name": "banno-pulse-goals",
-      "database_id": "e9bcff3a-67ac-4f71-859f-5209c5473072",
       "migrations_dir": "migrations"
     }
   ],

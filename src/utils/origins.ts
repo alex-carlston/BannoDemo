@@ -2,10 +2,6 @@
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]'])
 
-function hostnameMatchesSuffix(hostname: string, suffix: string): boolean {
-  return hostname === suffix || hostname.endsWith(`.${suffix}`)
-}
-
 export function parseOriginHostname(origin: string): string | null {
   try {
     const url = new URL(origin)
@@ -24,11 +20,8 @@ export function isLocalDevOrigin(origin: string): boolean {
 }
 
 /**
- * Allowed embed / FI origins:
- * - Exact ENV_URI origin
- * - *.banno.com
- * - *.jackhenry.com
- * - localhost / 127.0.0.1 in development
+ * Credentialed CORS allowlist — exact ENV_URI origin only (+ localhost in dev).
+ * Wildcards for *.banno.com / *.jackhenry.com are intentionally NOT allowed.
  */
 export function isAllowedExternalOrigin(
   origin: string | undefined,
@@ -46,25 +39,22 @@ export function isAllowedExternalOrigin(
 
   if (origin === envOrigin) return true
 
-  const hostname = parseOriginHostname(origin)
-  if (!hostname) return false
-
-  if (hostnameMatchesSuffix(hostname, 'banno.com')) return true
-  if (hostnameMatchesSuffix(hostname, 'jackhenry.com')) return true
-
   if (options?.allowLocalhost && isLocalDevOrigin(origin)) return true
 
   return false
 }
 
-/** CSRF: same-origin, allowed FI/Banno origins, or missing Origin (same-site navigations). */
+/**
+ * CSRF: require Origin; allow same-origin, ENV_URI, or localhost in development.
+ * Missing Origin is rejected.
+ */
 export function isAllowedCsrfOrigin(
   origin: string | undefined,
   requestOrigin: string,
   envUri: string,
   options?: { allowLocalhost?: boolean }
 ): boolean {
-  if (!origin) return true
+  if (!origin) return false
   if (origin === requestOrigin) return true
   return isAllowedExternalOrigin(origin, envUri, options)
 }

@@ -1,37 +1,22 @@
 # Banno Pulse — Security
 
-**Status:** Production posture after July 27, 2026 hardening  
 **Live Worker:** `https://banno-pulse.hackathon-16b.workers.dev`  
 **Related:** [architecture.md](./architecture.md) · [README.md](./README.md)
 
+How the plugin protects member data at the Cloudflare edge: identity, sessions, browser controls, storage, and abuse limits.
+
 ---
 
-## Overview
-
-Banno Pulse is a Banno Online Banking iframe plugin. It handles member financial data at the Cloudflare edge. Security goals:
+## Goals
 
 1. Prove identity with Banno OIDC (not self-asserted claims)
 2. Keep OAuth tokens and secrets off the browser
 3. Isolate each member’s data (sessions + D1 goals)
 4. Fail closed on auth, rate limits, and secret misconfiguration
 
-**Current risk rating:** Low
-
 ---
 
-## Threat Model
-
-### Assets
-
-| Asset | Storage | Sensitivity |
-|-------|---------|-------------|
-| Access / refresh tokens | Encrypted KV | Critical |
-| Session cookie (`__Secure-session_id`) | Browser (`httpOnly`) | High |
-| `CLIENT_SECRET`, `SESSION_ENC_SECRET`, `COOKIE_SIGNING_SECRET` | Wrangler secrets | Critical |
-| Account / transaction / document data | Ephemeral SSR only | High |
-| Savings goals | D1 (scoped by `user_id`) | Medium |
-
-### Trust boundaries
+## Trust boundaries
 
 ```
 [Member Browser]
@@ -44,58 +29,55 @@ Banno Pulse is a Banno Online Banking iframe plugin. It handles member financial
                   [Banno OIDC]        [Banno Consumer API]   [KV + D1]
 ```
 
-### Primary threats (mitigated)
-
-| Threat | Mitigation |
-|--------|------------|
-| Session forgery / token theft | Separate cookie HMAC secret; AES-GCM KV encryption; rotated secrets |
-| Forged identity (`sub`) | JWKS-verified ID token + `iss`/`aud`/`exp`/`nonce` |
-| CSRF on goal mutations | Hono CSRF + hostname allowlists |
-| Cross-tenant goal access | D1 queries always bind session `user_id` |
-| Clickjacking / hostile embeds | CSP `frame-ancestors` limited to `ENV_URI` |
-| Secret exposure in config | Secrets only via Wrangler / `.dev.vars` (gitignored) |
-| Error-based recon | Generic client messages; details logged with `requestId` only |
-| Brute / flood on auth | IP rate limits on `/auth/*`, `/callback*`, `/api/*` (fail closed) |
+| Asset | Where it lives | Sensitivity |
+|-------|----------------|-------------|
+| Access / refresh tokens | Encrypted KV | Critical |
+| Session cookie (`__Secure-session_id`) | Browser (`httpOnly`) | High |
+| `CLIENT_SECRET`, `SESSION_ENC_SECRET`, `COOKIE_SIGNING_SECRET` | Wrangler secrets | Critical |
+| Account / transaction / document data | Ephemeral SSR only | High |
+| Savings goals | D1 (scoped by `user_id`) | Medium |
 
 ---
 
-## Authentication & Sessions
+## Authentication
 
-### OAuth 2.0 + PKCE + OIDC
+### Sign-in
 
-1. Generate PKCE (`S256`), `state`, and `nonce`
-2. Store `{ codeVerifier, nonce }` in encrypted KV under `auth_state:{state}` (10 min TTL)
-3. Redirect to Banno authorize endpoint
-4. On callback: consume state (single-use), exchange code server-side
-5. Verify `id_token` cryptographically (see below)
-6. Create encrypted session; set signed cookie
+1. Member hits **Sign in** → `GET /auth/login` (rate-limited). The public landing page does **not** create OAuth state.
+2. Worker generates PKCE (`S256`), `state`, and `nonce`; stores `{ codeVerifier, nonce }` encrypted in KV under `auth_state:{state}` (10 min TTL).
+3. Redirect to Banno authorize; callback exchanges the code **server-side**.
+4. ID token is verified before any session is created (see below).
+5. Encrypted session written to KV; signed `__Secure-session_id` cookie set.
 
 ### ID token verification (`src/utils/crypto.ts`)
 
-| Check | Detail |
-|-------|--------|
-| Signature | JWKS from `{ENV_URI}/a/consumer/api/v0/oidc/jwks` — RS256 / PS256 / ES256 |
-| Issuer | Must match OIDC discovery `issuer` |
-| Audience | Must include `CLIENT_ID` |
-| Expiry / nbf | Enforced with small clock skew on `nbf` |
+| Check | Behavior |
+|-------|----------|
+| Signature | JWKS from Banno discovery — RS256 / PS256 / ES256 |
+| Issuer / audience | Must match discovery `issuer` and `CLIENT_ID` |
+| Expiry | Enforced |
+| `iat` / `nbf` | Enforced with 120s clock-skew leeway |
 | Nonce | Must match value stored with OAuth state |
-| Subject | Non-empty `sub` required before session bind |
+| Subject | Non-empty `sub` required |
+| JWKS cache | 5 minutes; one forced refresh on verify failure |
 
 ### Session cookie
 
 | Attribute | Value |
 |-----------|-------|
 | Name | `__Secure-session_id` |
-| Signing | HMAC via **`COOKIE_SIGNING_SECRET`** (not the encryption secret) |
+| Signing | HMAC via `COOKIE_SIGNING_SECRET` (must differ from encryption secret — enforced at runtime) |
 | Flags | `httpOnly`, `secure`, `SameSite=None`, `Partitioned`, `path=/` |
 | Absolute TTL | 30 days |
-| Idle timeout | 30 minutes (`lastActivityAt`) |
+| Idle timeout | 30 minutes |
 
 ### Logout
 
-1. Revoke refresh token at Banno `/oidc/token/revocation`
-2. Delete KV `session:*` and `user_session:*`
-3. Clear cookie
+- **POST `/logout`** only (CSRF-protected). GET `/logout` redirects home with no side effects.
+- Uses a raw session peek (ignores idle) so refresh tokens are still revoked after idle expiry.
+- Revokes the refresh token at Banno, then deletes `session:*` and matching `user_session:*`.
+
+Idle timeout and session replacement on re-login also revoke before deleting local keys.
 
 ---
 
@@ -104,49 +86,54 @@ Banno Pulse is a Banno Online Banking iframe plugin. It handles member financial
 | Resource | Rule |
 |----------|------|
 | Plugin pages | Valid signed cookie → encrypted session |
-| `POST /api/goals*` | `requireSession` middleware + CSRF |
+| `POST /api/goals*` | `requireSession` + CSRF (Origin required) |
 | Goal rows | `WHERE user_id = ?` from session (never from form body) |
 | Banno API calls | Server-side Bearer token from session only |
 
 ---
 
-## Secrets & Configuration
+## Secrets
 
 | Name | Kind | Purpose |
 |------|------|---------|
 | `CLIENT_SECRET` | secret | OAuth confidential client |
 | `SESSION_ENC_SECRET` | secret | AES-GCM for KV payloads |
-| `COOKIE_SIGNING_SECRET` | secret | Cookie HMAC (must differ from encryption secret) |
+| `COOKIE_SIGNING_SECRET` | secret | Cookie HMAC (≠ encryption secret) |
 | `CLIENT_ID` | var | Public OAuth client id |
 | `ENV_URI` / `REDIRECT_URI` | var | FI base URL + callback |
 
-Rules:
+- Secrets never live in `wrangler.jsonc` `vars`
+- Local: `.dev.vars` (gitignored); production: `wrangler secret put …`
+- `REDIRECT_URI` validated: HTTPS, non-localhost in production, callback path
+- Boot/auth paths reject missing secrets or equal cookie/encryption secrets
 
-- Never place secrets in `wrangler.jsonc` `vars`
-- Local: `.dev.vars` (gitignored); template: `.dev.vars.example`
-- Production: `wrangler secret put …`
-- `REDIRECT_URI` validated at auth time: HTTPS, non-localhost in production, callback path
+KV encryption uses AES-GCM; there is no plaintext fallback when secrets are configured.
 
 ---
 
-## Network & Browser Controls
+## Browser controls
 
-### CORS / CSRF origins (`src/utils/origins.ts`)
+### CORS (credentialed)
 
-Allowed:
+Allowed origins:
 
 - Exact origin of `ENV_URI`
-- Hostnames under `*.banno.com` or `*.jackhenry.com` (suffix-safe)
-- Loopback (`localhost`, `127.0.0.1`) only when `ENVIRONMENT=development` or request host is local
+- Loopback only when `ENVIRONMENT=development` or the Worker host is local
 
-Substring matching (e.g. `includes('garden-fi')`) is intentionally not used.
+Corporate wildcards (`*.banno.com`, `*.jackhenry.com`) are **not** allowed for credentialed CORS. Framing still uses CSP `frame-ancestors` with `ENV_URI`.
+
+### CSRF
+
+- Applied to mutating routes outside `/auth` and `/callback`
+- **Missing `Origin` is rejected**
+- Allowed: same Worker origin, `ENV_URI`, optional localhost in development
 
 ### Content-Security-Policy
 
 ```
 default-src 'self'
 script-src 'self'
-style-src 'self' https://fonts.googleapis.com 'unsafe-inline'
+style-src 'self' https://fonts.googleapis.com
 img-src 'self' https: data:
 font-src 'self' https://fonts.gstatic.com
 connect-src 'self'
@@ -157,23 +144,24 @@ base-uri 'self'
 upgrade-insecure-requests
 ```
 
-Also set: HSTS (preload), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`.
+No `'unsafe-inline'` styles — dynamic UI uses SVG attributes and CSS classes. Static `ASSETS` responses get the same CSP family (including `frame-ancestors`) plus HSTS / nosniff / referrer policy.
 
-Static assets use `run_worker_first` so unmatched paths fall through to `ASSETS` with security headers applied.
+Also set: HSTS (preload), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`.
 
 ### Rate limits (fail closed)
 
 | Prefix | Max / window |
 |--------|----------------|
+| `/callback/plugin` | 20 / 60s (authenticated SSR) |
 | `/auth/` | 20 / 60s |
-| `/callback` | 30 / 60s |
+| `/callback` | 30 / 60s (OAuth code exchange) |
 | `/api/` | 40 / 60s |
 
-If KV is unavailable, rate-limited paths return **503** (not open).
+Counters use fixed time buckets per IP. Corrupt counters or KV errors return **503** (not open). Longest prefix wins so plugin SSR does not share the OAuth callback budget.
 
 ---
 
-## Data Protection
+## Data protection
 
 | Data | At rest | In transit | Browser |
 |------|---------|------------|---------|
@@ -182,99 +170,17 @@ If KV is unavailable, rate-limited paths return **503** (not open).
 | Accounts / txs | Not persisted | TLS | SSR HTML (masked account numbers) |
 | Goals | D1 SQLite | TLS | SSR HTML |
 
-Goals are capped at **50 per user** and amounts ≤ **1e12**. Inputs must be finite numbers.
-
-KV decryption never falls back to plaintext when encryption secrets are configured.
+Goals capped at **50 per user**, amounts ≤ **1e12**, finite numbers only. Clients only see safe error strings; details stay in logs with `requestId`.
 
 ---
 
-## Error Handling & Logging
+## Operational notes
 
-- Clients see only safe strings (`SAFE_AUTH_ERROR`, `SAFE_SERVER_ERROR`, …)
-- Server logs: short message + `requestId` + path — no token or OAuth error bodies to the browser
-- Dashboard data failures show a generic “could not be loaded” banner
-- Observability: 10% head sampling; invocation logs disabled
+After secret rotation:
 
----
+1. `npx wrangler secret list` — confirm all three secrets  
+2. `npm run deploy`  
+3. Members must re-authenticate (old sessions invalid)  
+4. Smoke: login → tabs → create/delete goal → **POST** logout  
 
-## Security Controls Matrix
-
-| Control | Status |
-|---------|--------|
-| OAuth 2.0 + PKCE (S256) + nonce | Strong |
-| ID token JWKS verification | Strong |
-| Encrypted sessions + separate cookie secret | Strong |
-| Idle + absolute session timeouts | Strong |
-| CSRF + origin allowlists | Strong |
-| XSS (JSX escape + CSP) | Strong |
-| Parameterized D1 / user scoping | Strong |
-| Rate limiting (fail closed) | Strong |
-| Secret management (Wrangler secrets) | Strong |
-| Token revocation on logout | Strong |
-| iframe framing control | Strong |
-
----
-
-## Operational Checklist
-
-After secret rotation or major auth changes:
-
-1. Confirm secrets: `npx wrangler secret list`  
-   Required: `CLIENT_SECRET`, `SESSION_ENC_SECRET`, `COOKIE_SIGNING_SECRET`
-2. Deploy: `npm run deploy`
-3. Expect all members to **re-authenticate** (old sessions invalid after key rotation)
-4. Smoke test: login → tabs → create/delete goal → logout
-
----
-
-## Audit History
-
-| Date | Result |
-|------|--------|
-| 2026-07-27 | Full audit: 2 Critical, 6 High, 9 Medium, 7 Low |
-| 2026-07-27 | All Critical/High/Medium and actionable Low findings remediated; Worker redeployed |
-
-### Remediation map (reference)
-
-| ID | Finding | Resolution |
-|----|---------|------------|
-| C-1 | Encryption secret in `vars` | Moved to Wrangler secret; rotated |
-| C-2 | Unverified ID token | JWKS + claim + nonce verification |
-| H-1 / H-2 | Weak CORS/CSRF matching | Hostname allowlists |
-| H-3 / H-6 | Error leakage | Safe client messages |
-| H-4 | Fail-open / narrow rate limits | Broader limits; fail closed |
-| H-5 | Shared crypto + cookie key | `COOKIE_SIGNING_SECRET` |
-| M-1 | No revocation | OIDC revoke on logout |
-| M-2 | Mixed time units | Unix seconds throughout |
-| M-3 | Plaintext KV fallback | Removed when secrets required |
-| M-4 | Unbounded goals | Caps + validation |
-| M-5 | Cross-site cookie | `Partitioned` |
-| M-6 | XSS blocklist | Removed; CSP + allowlists |
-| M-7 | 100% log sampling | 10%; no invocation logs |
-| M-8 | Unused session middleware | `requireSession` on `/api/*` |
-| M-9 | Weak redirect URI checks | `assertValidRedirectUri()` |
-| L-* | Misc | CSP upgrade, asset headers, idle timeout, form cleanup |
-
----
-
-## Re-audit Triggers
-
-Re-run a security review when any of these change:
-
-- OAuth / session / cookie code paths
-- New mutating API routes
-- Dependency upgrades (especially Hono)
-- New FI / multi-tenant deployment
-- Secret rotation procedures
-
-*Keep this document aligned with the deployed Worker. Prefer describing current controls first; keep audit history as appendix.*
-
----
-
-## Related Documents
-
-- [architecture.md](./architecture.md) — system design  
-- [README.md](./README.md) — setup overview  
-- [docs/plugin-starter.md](./docs/plugin-starter.md) — reusable kit for your own plugin  
-- [docs/setup-cloudflare.md](./docs/setup-cloudflare.md) — Workers / KV / secrets  
-- [docs/setup-node.md](./docs/setup-node.md) — Node.js tooling  
+Re-review when OAuth/session/cookie paths, mutating APIs, major dependency upgrades, or multi-FI deploys change.

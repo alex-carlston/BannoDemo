@@ -1,0 +1,11 @@
+# Local “deploy like CI” using the toolchain image.
+# Usage:
+#   export CLOUDFLARE_API_TOKEN=...
+#   export CLOUDFLARE_ACCOUNT_ID=...   # optional if wrangler.jsonc has account_id
+#   docker compose run --rm deploy
+services:
+  deploy:
+    build: .
+    environment:
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:?set CLOUDFLARE_API_TOKEN}
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}

@@ -1,5 +1,5 @@
 import KVService from './kv.service'
-import { refreshAccessToken } from './auth.service'
+import { refreshAccessToken, revokeRefreshToken } from './auth.service'
 import type { Bindings } from './auth.service'
 
 /** Absolute session lifetime (seconds). */
@@ -43,7 +43,7 @@ export class SessionService {
     const expiresAt = this.sessionExpiryUnix()
     const existingSessionId = await this.getUserSessionId(userId)
     if (existingSessionId && existingSessionId !== sessionId) {
-      await this.deleteSession(existingSessionId)
+      await this.destroySession(existingSessionId)
     }
     const now = Math.floor(Date.now() / 1000)
     await this.kvService.put(
@@ -64,6 +64,19 @@ export class SessionService {
     return this.kvService.get<string>(`user_session:${userId}`)
   }
 
+  /** Raw session read — skips idle timeout (used for logout / revoke). */
+  async peekSession(sessionId: string): Promise<SessionData | null> {
+    const kvRes = await this.kvService.get<StoredSession>(`session:${sessionId}`)
+    if (!kvRes) return null
+    return {
+      userId: kvRes.userId,
+      accessToken: kvRes.accessToken,
+      refreshToken: kvRes.refreshToken,
+      expiresAt: kvRes.expiresAt,
+      lastActivityAt: kvRes.lastActivityAt,
+    }
+  }
+
   async getSession(sessionId: string): Promise<SessionData | null> {
     const kvRes = await this.kvService.get<StoredSession>(`session:${sessionId}`)
     if (!kvRes) return null
@@ -71,7 +84,8 @@ export class SessionService {
     const now = Math.floor(Date.now() / 1000)
 
     if (kvRes.lastActivityAt && now - kvRes.lastActivityAt > SESSION_IDLE_SECONDS) {
-      await this.deleteSession(sessionId)
+      await revokeRefreshToken(kvRes.refreshToken, this.env)
+      await this.deleteSession(sessionId, kvRes.userId)
       return null
     }
 
@@ -94,7 +108,7 @@ export class SessionService {
           lastActivityAt: now,
         }
       } catch {
-        await this.deleteSession(sessionId)
+        await this.deleteSession(sessionId, kvRes.userId)
         return null
       }
     }
@@ -103,12 +117,37 @@ export class SessionService {
     return session
   }
 
-  async deleteSession(sessionId: string): Promise<void> {
+  /**
+   * Delete session payload and clear user_session mapping when it still points here.
+   */
+  async deleteSession(sessionId: string, userId?: string): Promise<void> {
+    let resolvedUserId = userId
+    if (!resolvedUserId) {
+      const existing = await this.kvService.get<StoredSession>(`session:${sessionId}`)
+      resolvedUserId = existing?.userId
+    }
+
     await this.kvService.delete(`session:${sessionId}`)
+
+    if (resolvedUserId) {
+      const mapped = await this.kvService.get<string>(`user_session:${resolvedUserId}`)
+      if (mapped === sessionId) {
+        await this.kvService.delete(`user_session:${resolvedUserId}`)
+      }
+    }
   }
 
   async deleteUserSession(userId: string): Promise<void> {
     await this.kvService.delete(`user_session:${userId}`)
+  }
+
+  /** Revoke IdP refresh token (best-effort) and wipe local session keys. */
+  async destroySession(sessionId: string): Promise<void> {
+    const session = await this.peekSession(sessionId)
+    if (session?.refreshToken) {
+      await revokeRefreshToken(session.refreshToken, this.env)
+    }
+    await this.deleteSession(sessionId, session?.userId)
   }
 
   async updateSession(sessionId: string, data: SessionData): Promise<void> {

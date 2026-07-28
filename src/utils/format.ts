@@ -57,8 +57,31 @@ const CATEGORY_COLORS: Record<string, string> = {
   Other: '#cbd5e1',
 }
 
+const CATEGORY_SLUGS: Record<string, string> = {
+  Groceries: 'groceries',
+  Dining: 'dining',
+  Transportation: 'transportation',
+  Shopping: 'shopping',
+  Subscriptions: 'subscriptions',
+  Utilities: 'utilities',
+  Income: 'income',
+  Transfers: 'transfers',
+  Cash: 'cash',
+  Other: 'other',
+}
+
 export function categoryColor(category: string): string {
   return CATEGORY_COLORS[category] ?? CATEGORY_COLORS.Other
+}
+
+/** CSS class suffix for category color (no inline styles). */
+export function categorySlug(category: string): string {
+  return CATEGORY_SLUGS[category] ?? 'other'
+}
+
+export function clampPercent(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return Math.max(0, Math.min(100, Math.round(value)))
 }
 
 export function computeHealthScore(accounts: { balance?: string; accountSubType?: string }[]): number {

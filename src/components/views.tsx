@@ -5,8 +5,80 @@ import {
   maskAccountNumber,
   accountIcon,
   categorizeTransaction,
-  categoryColor,
+  categorySlug,
+  clampPercent,
 } from '../utils/format'
+
+function HealthRing({ score, large }: { score: number; large?: boolean }) {
+  const pct = clampPercent(score)
+  const size = large ? 120 : 56
+  const stroke = large ? 10 : 6
+  const r = (size - stroke) / 2
+  const c = 2 * Math.PI * r
+  const offset = c - (pct / 100) * c
+  return (
+    <div class={`health-ring-wrap${large ? ' large' : ''}`}>
+      <svg
+        class="health-ring-svg"
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        aria-hidden="true"
+      >
+        <circle
+          class="health-ring-track"
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke-width={stroke}
+        />
+        <circle
+          class="health-ring-progress"
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke-width={stroke}
+          stroke-dasharray={`${c}`}
+          stroke-dashoffset={`${offset}`}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </svg>
+      <span class="health-value">{pct}</span>
+    </div>
+  )
+}
+
+function PercentBar({
+  percent,
+  category,
+  kind = 'spend',
+}: {
+  percent: number
+  category?: string
+  kind?: 'spend' | 'goal'
+}) {
+  const pct = clampPercent(percent)
+  const slug = category ? categorySlug(category) : 'other'
+  return (
+    <svg
+      class={kind === 'goal' ? 'goal-bar-svg' : 'bar-svg'}
+      viewBox="0 0 100 8"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <rect
+        class={kind === 'goal' ? 'goal-bar-fill' : `bar-fill-rect cat-${slug}`}
+        x="0"
+        y="0"
+        width={pct}
+        height="8"
+        rx="3"
+      />
+    </svg>
+  )
+}
 
 export function DashboardView({ data }: { data: DashboardData }) {
   const recentTx = data.transactions.slice(0, 5)
@@ -30,9 +102,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
         </div>
         <div class="stat-card">
           <span class="stat-label">Health Score</span>
-          <div class="health-ring" style={`--score: ${data.healthScore}`}>
-            <span class="health-value">{data.healthScore}</span>
-          </div>
+          <HealthRing score={data.healthScore} />
         </div>
         <div class="stat-card">
           <span class="stat-label">Goals</span>
@@ -76,10 +146,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
                   <span>{formatCurrency(cat.amount)}</span>
                 </div>
                 <div class="bar-track">
-                  <div
-                    class="bar-fill"
-                    style={`width: ${cat.percentage}%; background: ${cat.color}`}
-                  />
+                  <PercentBar percent={cat.percentage} category={cat.category} />
                 </div>
               </div>
             ))}
@@ -171,6 +238,7 @@ export function TransactionsView({ data }: { data: DashboardData }) {
             <tbody>
               {data.transactions.map((tx) => {
                 const category = categorizeTransaction(tx.description, tx.memo)
+                const slug = categorySlug(category)
                 return (
                   <tr key={tx.id}>
                     <td class="date-cell">{formatDate(tx.date)}</td>
@@ -179,9 +247,7 @@ export function TransactionsView({ data }: { data: DashboardData }) {
                       {tx.checkNumber && <span class="tx-check">Check #{tx.checkNumber}</span>}
                     </td>
                     <td>
-                      <span class="category-pill" style={`--pill-color: ${categoryColor(category)}`}>
-                        {category}
-                      </span>
+                      <span class={`category-pill cat-${slug}`}>{category}</span>
                     </td>
                     <td class={`amount ${parseFloat(tx.amount ?? '0') >= 0 ? 'positive' : 'negative'}`}>
                       {formatCurrency(tx.amount ?? 0)}
@@ -206,9 +272,7 @@ export function InsightsView({ data }: { data: DashboardData }) {
       <section class="panel">
         <h2 class="panel-title">Financial Health</h2>
         <div class="health-detail">
-          <div class="health-ring large" style={`--score: ${data.healthScore}`}>
-            <span class="health-value">{data.healthScore}</span>
-          </div>
+          <HealthRing score={data.healthScore} large />
           <p class="health-desc">
             Your score reflects account diversity, savings presence, and overall balance health.
           </p>
@@ -221,7 +285,7 @@ export function InsightsView({ data }: { data: DashboardData }) {
           <div class="donut-legend">
             {data.spendingCategories.map((cat) => (
               <div key={cat.category} class="legend-item">
-                <span class="legend-dot" style={`background: ${cat.color}`} />
+                <span class={`legend-dot cat-${categorySlug(cat.category)}`} />
                 <span class="legend-label">{cat.category}</span>
                 <span class="legend-value">{cat.percentage}%</span>
                 <span class="legend-amount">{formatCurrency(cat.amount)}</span>
@@ -276,7 +340,7 @@ export function GoalsView({ data }: { data: DashboardData }) {
 
         <div class="goals-grid">
           {data.goals.map((goal) => {
-            const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
+            const progress = clampPercent((goal.currentAmount / goal.targetAmount) * 100)
             return (
               <div key={goal.id} class="goal-card">
                 <div class="goal-header">
@@ -288,13 +352,13 @@ export function GoalsView({ data }: { data: DashboardData }) {
                   </form>
                 </div>
                 <div class="goal-progress">
-                  <div class="goal-bar" style={`width: ${progress}%`} />
+                  <PercentBar percent={progress} kind="goal" />
                 </div>
                 <div class="goal-amounts">
                   <span>{formatCurrency(goal.currentAmount)}</span>
                   <span class="goal-target">of {formatCurrency(goal.targetAmount)}</span>
                 </div>
-                <span class="goal-percent">{Math.round(progress)}% complete</span>
+                <span class="goal-percent">{progress}% complete</span>
               </div>
             )
           })}

@@ -373,7 +373,7 @@ Banno **supports localhost** redirect URIs for local development (see [Jack Henr
 | Logout | KV wipe + token revoke |
 | Abuse | Rate limits fail closed |
 
-Full detail: [security.md](./security.md).
+Security controls: [security.md](./security.md).
 
 ---
 
@@ -477,6 +477,6 @@ banno-pulse/
 - [docs/setup-node.md](./docs/setup-node.md) — Node.js install and local tooling  
 - [docs/setup-cloudflare.md](./docs/setup-cloudflare.md) — Workers, KV, D1, secrets, deploy  
 - [docs/plugin-starter.md](./docs/plugin-starter.md) — Build your own plugin on the kit  
-- [security.md](./security.md) — Current security posture and audit history  
+- [security.md](./security.md) — How security controls work  
 - [README.md](./README.md) — Setup overview  
 - [Banno Consumer API](https://jackhenry.dev/open-api-docs/consumer-api/)

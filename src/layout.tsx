@@ -12,6 +12,16 @@ const TABS = [
 const VIEWPORT =
   'width=device-width, initial-scale=1.0, viewport-fit=cover'
 
+function LogoutForm({ className, label }: { className?: string; label: string }) {
+  return (
+    <form method="post" action="/logout" class={className ?? 'inline-form'}>
+      <button type="submit" class="logout-link" title="Sign out">
+        {label}
+      </button>
+    </form>
+  )
+}
+
 export const Layout = ({
   children,
   title = 'Banno Pulse',
@@ -39,11 +49,11 @@ export const Layout = ({
     )
   }
 
-  const htmlClass = embed ? 'embed-mode' : undefined
-  const shellStyle = embed ? `--plugin-height: ${pluginHeight}px` : undefined
+  const heightClass = `embed-h-${pluginHeight}`
+  const htmlClass = embed ? `embed-mode ${heightClass}` : undefined
 
   return (
-    <html lang="en" class={htmlClass} style={shellStyle}>
+    <html lang="en" class={htmlClass}>
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content={VIEWPORT} />
@@ -56,7 +66,7 @@ export const Layout = ({
           rel="stylesheet"
         />
         <link href="/styles.css" rel="stylesheet" />
-        {embed && <script src="/embed.js" defer />}
+        <script src="/tabs.js" defer />
       </head>
       <body class={embed ? 'embed-body' : undefined}>
         <div class="app-shell">
@@ -73,24 +83,21 @@ export const Layout = ({
                 <span class="user-avatar">{userName.charAt(0).toUpperCase()}</span>
                 <span class="user-name">{userName}</span>
                 {embed && (
-                  <a href="/logout" class="logout-link embed-logout" title="Sign out">
-                    ↗
-                  </a>
+                  <LogoutForm className="inline-form embed-logout" label="↗" />
                 )}
               </div>
             )}
           </header>
 
           {activeTab && (
-            <nav class="tab-nav" role="tablist" aria-label="Dashboard sections">
+            <nav class="tab-nav" aria-label="Dashboard sections">
               {TABS.map((tab) => (
                 <a
                   key={tab.id}
                   href={`/callback/plugin?tab=${tab.id}`}
                   class={`tab-link ${activeTab === tab.id ? 'active' : ''}`}
-                  role="tab"
-                  aria-selected={activeTab === tab.id}
-                  aria-label={tab.label}
+                  data-tab={tab.id}
+                  aria-current={activeTab === tab.id ? 'page' : undefined}
                   title={tab.label}
                 >
                   <span class="tab-icon" aria-hidden="true">
@@ -110,9 +117,7 @@ export const Layout = ({
               <span class="sep">·</span>
               <span>Secured with OAuth 2.0 + PKCE</span>
               <span class="sep">·</span>
-              <a href="/logout" class="logout-link">
-                Sign out
-              </a>
+              <LogoutForm label="Sign out" />
             </footer>
           )}
         </div>

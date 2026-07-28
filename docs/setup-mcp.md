@@ -73,6 +73,7 @@ Ask Cursor in chat:
 
 - “Using Cloudflare MCP, list Workers in my account.”
 - “Show recent logs for Worker `banno-pulse`.”
+- “List recent Workers Builds for `banno-pulse`.” (uses the builds MCP after you connect Git in the dashboard — see [setup-cloudflare.md](./setup-cloudflare.md) §5 path C)
 
 If auth fails, re-run OAuth on the MCP servers and `npx wrangler whoami` again.
 

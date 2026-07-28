@@ -124,7 +124,7 @@ See [security.md](../security.md).
 
 - [ ] Node 18+ installed ([setup-node.md](./setup-node.md))
 - [ ] Cloudflare account + `wrangler login` ([setup-cloudflare.md](./setup-cloudflare.md))
-- [ ] KV namespace bound as `SESSIONS_KV`
+- [ ] Deploy once so Wrangler auto-provisions `SESSIONS_KV` (+ D1 if you keep Goals)
 - [ ] Secrets set: `CLIENT_SECRET`, `SESSION_ENC_SECRET`, `COOKIE_SIGNING_SECRET`
 - [ ] `CLIENT_ID`, `ENV_URI`, `REDIRECT_URI` configured
 - [ ] Banno People Primary + Redirect URIs = public HTTPS callback
