@@ -1,0 +1,26 @@
+{
+  "name": "banno-pulse",
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "dev:banno": "wrangler dev --remote",
+    "deploy": "wrangler deploy --minify",
+    "setup:win": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/setup.ps1",
+    "deploy:win": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/deploy.ps1",
+    "setup:mac": "bash ./scripts/setup.sh",
+    "deploy:mac": "bash ./scripts/deploy.sh",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+  },
+  "dependencies": {
+    "hono": "^4.11.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260722.1",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.4.0"
+  }
+}

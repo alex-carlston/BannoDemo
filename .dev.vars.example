@@ -1,0 +1,13 @@
+# Copy to .dev.vars and fill in your Banno OAuth credentials
+# Get these from Banno People (External Application Configuration)
+# Windows: .\scripts\setup.ps1   |   macOS/Linux: ./scripts/setup.sh
+
+CLIENT_ID=your-client-id-from-banno-admin
+CLIENT_SECRET=your-client-secret-from-banno-admin
+ENV_URI=https://digital.garden-fi.com
+REDIRECT_URI=http://localhost:8787/callback/plugin
+
+# Generate with: openssl rand -base64 32  (two DIFFERENT values)
+SESSION_ENC_SECRET=replace-with-openssl-rand-base64-32
+COOKIE_SIGNING_SECRET=replace-with-different-openssl-rand-base64-32
+ENVIRONMENT=development

@@ -1,0 +1,47 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "banno-pulse",
+  "main": "src/index.tsx",
+  "compatibility_date": "2026-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "vars": {
+    "CLIENT_ID": "fe154a86-51ce-47a1-b59e-f0560e71846d",
+    "ENV_URI": "https://digital.garden-fi.com",
+    "REDIRECT_URI": "https://banno-pulse.hackathon-16b.workers.dev/callback/plugin",
+    "ENVIRONMENT": "production",
+    "PLUGIN_INITIAL_HEIGHT": "600"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "SESSIONS_KV",
+      "id": "c683e833a1614d8e93f4f0fcb9aef04c",
+      "preview_id": "local-banno-pulse-sessions"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "GOALS_DB",
+      "database_name": "banno-pulse-goals",
+      "database_id": "e9bcff3a-67ac-4f71-859f-5209c5473072",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "secrets": {
+    "required": ["CLIENT_SECRET", "SESSION_ENC_SECRET", "COOKIE_SIGNING_SECRET"]
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 0.1,
+      "persist": true,
+      "invocation_logs": false
+    }
+  }
+}

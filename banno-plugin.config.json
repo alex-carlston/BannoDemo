@@ -1,0 +1,11 @@
+{
+  "title": "Banno Pulse",
+  "description": "Financial wellness command center — accounts, activity, insights, goals, and documents.",
+  "initialHeight": 600,
+  "externalApplicationLinkType": "PluginCard",
+  "notes": {
+    "initialHeight": "Set this value in Banno People → Plugin configuration → Initial height. Must match PLUGIN_INITIAL_HEIGHT in wrangler.jsonc.",
+    "recommendedRange": "Jack Henry recommends 200–400px for parity with other dashboard cards. We use 600px to fit the tabbed dashboard without excessive cropping.",
+    "responsive": "Card-face width on mobile is typically 264–336px. The app CSS is tuned for that range."
+  }
+}
