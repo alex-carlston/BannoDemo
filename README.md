@@ -4,6 +4,9 @@ A Banno Online Banking plugin (financial wellness hub) that runs on Cloudflare W
 
 This README is a **start-to-finish path** for someone opening the project in Cursor for the first time. Copy the commands. Do the steps in order.
 
+<img width="1080" height="2340" alt="Screenshot_20260729_123744_Chrome" src="https://github.com/user-attachments/assets/d529b535-69b4-4399-9d4e-154397f191a6" />
+
+
 Official Jack Henry setup for accounts / test user / plugin / external app:  
 **[Getting Started | Banno SDK](https://jackhenry.dev/open-api-docs/getting-started/)**
 
