@@ -35,7 +35,7 @@ That is what was used in early development of this repo. It is **not** documente
 Legacy helper scripts under `scripts/setup.*` and `scripts/deploy.*` (PowerShell/bash) are **not** part of the supported journey and may be removed later. Prefer:
 
 ```bash
-docker compose run --rm quickstart
+docker compose run --rm --service-ports quickstart
 # or
 docker compose run --rm deploy
 ```
