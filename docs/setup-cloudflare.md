@@ -77,10 +77,14 @@ Create a token at [API Tokens](https://dash.cloudflare.com/profile/api-tokens) w
 3. Deploy command: `npm run deploy` (includes D1 migrations)  
 4. Docs: [Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/)
 
-### D) GitHub Actions
+### D) GitHub Actions (optional)
 
-[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) builds the Docker image and runs `scripts/deploy-ci.sh`.
+[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) runs on push to `main` and on manual dispatch.
 
+- If repo secret `CLOUDFLARE_API_TOKEN` is **missing**, the job **skips** (green) — this is normal when you only use Docker quickstart.
+- To enable CI deploy: add `CLOUDFLARE_API_TOKEN` (+ usually `CLOUDFLARE_ACCOUNT_ID`) under GitHub → Settings → Secrets, then re-run the workflow.
+- Prefer **one** of Actions or Workers Builds — not both on the same branch.
+- First-time / demo deploys should still use Docker quickstart so `CLIENT_ID`, `REDIRECT_URI`, and secrets are set correctly. Plain `npm run deploy` in CI does not read your local `.env`.
 ---
 
 ## 5) Optional host local
@@ -103,7 +107,8 @@ See [host-dev.md](./host-dev.md) — not onboarding.
 | Symptom | Fix |
 |---------|-----|
 | Docker not running | Start Docker Desktop; `docker version` |
-| `localhost:8976` connection refused after Cloudflare approve | Re-run quickstart (`--service-ports`). Do not reuse an old callback URL. Or use `CLOUDFLARE_API_TOKEN` |
+| Login check after quickstart looked failed | Old bug: image has no `curl`. Pull latest; check is Node-based and non-fatal if deploy worked |
+| GitHub Action red X on push | Optional CI — add `CLOUDFLARE_API_TOKEN` or ignore; workflow now skips cleanly without it |
 | Login hangs | Open the **new** printed OAuth URL on the **host**; leave the terminal open until callback succeeds |
 | Wrong Cloudflare account | Answer **n** at confirm, or clear token and re-login |
 | OAuth redirect mismatch | Paste exact `…/callback/plugin` from quickstart into Jack Henry |
