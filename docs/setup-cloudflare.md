@@ -9,10 +9,10 @@ Production is always a **Cloudflare Worker**. Docker only runs Wrangler; it does
 ## 1) Account + login (interactive)
 
 1. Sign up: [https://dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up)  
-2. Run `docker compose run --rm quickstart`  
+2. Run `docker compose run --rm --service-ports quickstart` (or `.\quickstart.cmd` / `./quickstart.sh`)  
 3. Confirm the account at the **`wrangler whoami`** prompt  
 
-Wrong account → answer **n** → script logs out and runs login again (OAuth URL on host browser; port **8976**).
+Wrong account → answer **n** → script logs out and runs login again (OAuth URL on host browser; port **8976** must be published with `--service-ports`).
 
 ---
 
@@ -51,7 +51,7 @@ Do not bake secrets into the Docker image.
 
 | Path | When | Command |
 |------|------|---------|
-| **A. Docker quickstart** (supported) | First-time / demos | `cp .env.example .env` then `docker compose run --rm quickstart` |
+| **A. Docker quickstart** (supported) | First-time / demos | `cp .env.example .env` then `.\quickstart.cmd` / `./quickstart.sh` |
 | **B. Docker CI toolbox** | Token, no browser | `CLOUDFLARE_API_TOKEN` in `.env` → `docker compose run --rm deploy` |
 | **C. Workers Builds** | Auto-deploy on git push | Dashboard → Worker → Builds; deploy command `npm run deploy` |
 | **D. GitHub Actions** | Alternative to C | Needs `CLOUDFLARE_API_TOKEN` (+ usually `CLOUDFLARE_ACCOUNT_ID`) |
@@ -103,7 +103,8 @@ See [host-dev.md](./host-dev.md) — not onboarding.
 | Symptom | Fix |
 |---------|-----|
 | Docker not running | Start Docker Desktop; `docker version` |
-| Login hangs | Open the printed OAuth URL on the **host**; ensure port **8976** is free |
+| `localhost:8976` connection refused after Cloudflare approve | Re-run quickstart (`--service-ports`). Do not reuse an old callback URL. Or use `CLOUDFLARE_API_TOKEN` |
+| Login hangs | Open the **new** printed OAuth URL on the **host**; leave the terminal open until callback succeeds |
 | Wrong Cloudflare account | Answer **n** at confirm, or clear token and re-login |
 | OAuth redirect mismatch | Paste exact `…/callback/plugin` from quickstart into Jack Henry |
 | Goals SQL errors | Re-run deploy so migrations apply |

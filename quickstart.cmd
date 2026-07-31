@@ -41,8 +41,12 @@ if "!MISSING!"=="1" (
 echo Using repo: %cd%
 echo Starting Docker quickstart...
 echo.
+echo Note: --service-ports publishes host port 8976 for the Cloudflare login callback.
+echo.
 
-docker compose run --rm quickstart
+REM --service-ports is required: `docker compose run` does NOT publish ports: by default.
+REM Without it, Edge/Chrome hits http://localhost:8976/... and connection fails.
+docker compose run --rm --service-ports quickstart
 exit /b %ERRORLEVEL%
 
 :require_env

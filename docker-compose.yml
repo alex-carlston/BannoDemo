@@ -2,7 +2,9 @@
 #
 # Video / human quickstart (interactive whoami + login + JH prompts):
 #   cp .env.example .env
-#   docker compose run --rm quickstart
+#   # MUST use --service-ports so host :8976 reaches Wrangler OAuth callback
+#   docker compose run --rm --service-ports quickstart
+#   # or: ./quickstart.sh  /  quickstart.cmd
 #
 # CI / token deploy (non-interactive):
 #   export CLOUDFLARE_API_TOKEN=...
@@ -12,7 +14,8 @@ services:
   quickstart:
     build: .
     ports:
-      # Cloudflare OAuth callback from host browser → Wrangler in the container
+      # Cloudflare OAuth callback from host browser → Wrangler in the container.
+      # Published only when you pass --service-ports to `docker compose run`.
       - "8976:8976"
     env_file:
       - path: .env

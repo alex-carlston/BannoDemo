@@ -1,8 +1,33 @@
 # Docker deploy (clone → `.env` → deploy)
 
-**Supported path:** clone from GitHub, fill `.env`, run `./quickstart.sh`.
+**Supported path:** clone from GitHub, fill `.env`, run the quickstart script.
 
 Repo: https://github.com/alex-carlston/BannoDemo
+
+## Windows
+
+```powershell
+git clone https://github.com/alex-carlston/BannoDemo.git
+cd BannoDemo
+copy .env.example .env
+notepad .env
+# set CLIENT_ID, CLIENT_SECRET, SESSION_ENC_SECRET, COOKIE_SIGNING_SECRET
+.\quickstart.cmd
+```
+
+Docker Desktop must show **Engine running**. Confirm with `docker version` and `docker compose version`.
+
+Secrets without OpenSSL (PowerShell):
+
+```powershell
+$b = New-Object byte[] 32
+[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+[Convert]::ToBase64String($b)
+```
+
+Run twice; paste different values into `.env`.
+
+## macOS / Linux
 
 ```bash
 git clone https://github.com/alex-carlston/BannoDemo.git
@@ -25,20 +50,40 @@ Full steps: [../README.md](../README.md)
 | `CLIENT_ID` | Yes |
 | `CLIENT_SECRET` | Yes |
 | `ENV_URI` | Yes (default Garden URL is fine) |
-| `SESSION_ENC_SECRET` | Yes (`openssl rand -base64 32`) |
+| `SESSION_ENC_SECRET` | Yes (random; see above) |
 | `COOKIE_SIGNING_SECRET` | Yes (different value) |
 | `REDIRECT_URI` | No on first run — set from deploy output |
 | `CLOUDFLARE_API_TOKEN` | No for interactive login |
 
-`./quickstart.sh` refuses to start if required values are empty.
+Quickstart refuses to start if required values are empty.
 
 ---
 
-## Cloudflare confirm
+## Cloudflare login and port 8976
 
-Interactive path uses `wrangler login` (browser URL, port **8976** mapped). You must answer **Y** to confirm the account from `wrangler whoami`.
+Interactive path uses `wrangler login` inside Docker. After you approve in the browser, Cloudflare redirects to:
 
-Token path: put `CLOUDFLARE_API_TOKEN` in `.env`, then `docker compose run --rm deploy` ([setup-cloudflare.md](./setup-cloudflare.md)).
+```text
+http://localhost:8976/oauth/callback?...
+```
+
+That must reach Wrangler in the container. Quickstart publishes the port with:
+
+```text
+docker compose run --rm --service-ports quickstart
+```
+
+**Important:** plain `docker compose run` does **not** publish `ports:` from Compose. Without `--service-ports`, Edge/Chrome shows connection refused on `:8976` and login fails.
+
+You must answer **Y** to confirm the account from `wrangler whoami`.
+
+### If localhost:8976 failed once
+
+1. Ctrl+C the quickstart terminal  
+2. Re-run `.\quickstart.cmd` / `./quickstart.sh` (do not reuse an old browser callback URL)  
+3. Or set `CLOUDFLARE_API_TOKEN` in `.env` and re-run ([setup-cloudflare.md](./setup-cloudflare.md))
+
+Token path (no browser): put `CLOUDFLARE_API_TOKEN` in `.env`, then `docker compose run --rm deploy`.
 
 ---
 

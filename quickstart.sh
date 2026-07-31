@@ -65,5 +65,9 @@ fi
 echo "Using repo: $ROOT"
 echo "CLIENT_ID is set (${#CLIENT_ID} chars). Starting Docker quickstart…"
 echo
+echo "Note: --service-ports publishes host :8976 for the Cloudflare login callback."
+echo
 
-exec docker compose run --rm quickstart
+# --service-ports is required: `docker compose run` does NOT publish `ports:` by default.
+# Without it, the browser hits http://localhost:8976/... and nothing is listening.
+exec docker compose run --rm --service-ports quickstart

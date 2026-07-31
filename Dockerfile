@@ -20,5 +20,7 @@ RUN chmod +x ./scripts/deploy-ci.sh ./scripts/docker-quickstart.sh
 
 # Auth at runtime: interactive `wrangler login` (quickstart) or CLOUDFLARE_API_TOKEN (CI).
 # Do not bake secrets into the image.
+# OAuth callback listens here when quickstart runs with --service-ports.
+EXPOSE 8976
 # Default entrypoint stays CI-safe; compose overrides for quickstart.
 ENTRYPOINT ["./scripts/deploy-ci.sh"]

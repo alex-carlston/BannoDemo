@@ -135,16 +135,27 @@ ensure_cloudflare_auth() {
     warn "Not logged in — starting OAuth."
     cat <<'EOF'
 
-  1. Copy the URL Wrangler prints below into your HOST browser (Chrome/Edge/Safari).
-  2. Sign in to Cloudflare and approve Wrangler.
-  3. Docker maps host port 8976 → this container for the OAuth callback.
-  4. When the browser says success, return here — login should finish.
+  Cloudflare login (Windows / macOS / Linux — same steps):
+
+  1. Leave this terminal open. Wrangler is waiting for the browser callback.
+  2. Copy the URL printed below into your HOST browser (Edge / Chrome / Safari).
+  3. Sign in to Cloudflare and click Allow / Approve.
+  4. Cloudflare redirects to http://localhost:8976/oauth/callback — that must
+     reach THIS container (quickstart uses --service-ports for that).
+  5. When the browser shows success, return here — login finishes automatically.
+
+  If localhost:8976 fails to connect: Ctrl+C, then re-run ./quickstart.sh
+  (Windows: quickstart.cmd). Do not paste the callback URL into chat.
+
+  Alternative (no browser callback): put CLOUDFLARE_API_TOKEN in .env and re-run.
+  Create a token: https://dash.cloudflare.com/profile/api-tokens
+  (Edit Cloudflare Workers / D1 / KV).
 
 EOF
     # --browser=false: print the URL (host browser cannot be launched from most containers).
     npx --yes wrangler login --callback-host=0.0.0.0 --callback-port=8976 --browser=false
     if ! is_logged_in; then
-      fail "Login did not complete. Re-run quickstart, or set CLOUDFLARE_API_TOKEN in .env."
+      fail "Login did not complete. Re-run quickstart with --service-ports, or set CLOUDFLARE_API_TOKEN in .env."
       exit 1
     fi
   fi
@@ -158,6 +169,11 @@ EOF
   if [[ "${answer:-}" =~ ^[Nn]$ ]]; then
     echo "Logging out so you can pick another account…"
     npx --yes wrangler logout || true
+    cat <<'EOF'
+
+  Re-login: open the new URL in your HOST browser. localhost:8976 must reach this container.
+
+EOF
     npx --yes wrangler login --callback-host=0.0.0.0 --callback-port=8976 --browser=false
     is_logged_in || { fail "Still not logged in."; exit 1; }
     printf 'Deploy with the NEW account shown above? [Y/n] '
