@@ -60,6 +60,12 @@ async function generatePKCE(): Promise<{ codeVerifier: string; codeChallenge: st
 }
 
 export async function generateAuthUrl(env: Bindings): Promise<AuthInitResult> {
+  if (!env.CLIENT_ID?.trim()) {
+    throw new Error('missing_client_id')
+  }
+  if (!env.REDIRECT_URI?.trim()) {
+    throw new Error('missing_redirect_uri')
+  }
   assertValidRedirectUri(env.REDIRECT_URI, env.ENVIRONMENT)
   const { codeVerifier, codeChallenge } = await generatePKCE()
   const state = await generateRandomString(16)

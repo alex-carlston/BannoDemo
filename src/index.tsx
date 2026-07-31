@@ -196,6 +196,35 @@ app.route('/', createAuthRoutes())
 app.route('/', createPageRoutes())
 app.route('/', createApiRoutes())
 
+/** Non-secret setup check — used after deploy to confirm vars are present. */
+app.get('/__setup', (c) => {
+  const redirect = (c.env.REDIRECT_URI || '').trim()
+  const clientId = (c.env.CLIENT_ID || '').trim()
+  const envUri = (c.env.ENV_URI || '').trim()
+  const ok =
+    Boolean(clientId) &&
+    Boolean(redirect) &&
+    redirect.includes('/callback') &&
+    Boolean(envUri) &&
+    Boolean(c.env.SESSIONS_KV)
+  return c.json(
+    {
+      ok,
+      hasClientId: Boolean(clientId),
+      hasRedirectUri: Boolean(redirect),
+      redirectLooksLikeCallback: redirect.includes('/callback'),
+      hasEnvUri: Boolean(envUri),
+      hasSessionsKv: Boolean(c.env.SESSIONS_KV),
+      // Safe to show — this is the public OAuth redirect, not a secret.
+      redirectUri: redirect || null,
+      hint: ok
+        ? 'Worker vars look set. Put redirectUri FIRST in Jack Henry External application, then open Garden.'
+        : 'Missing CLIENT_ID or REDIRECT_URI on the Worker. Re-run ./quickstart.sh (or quickstart.cmd).',
+    },
+    ok ? 200 : 503
+  )
+})
+
 app.notFound(async (c) => {
   if (c.env.ASSETS) {
     const assetResponse = await c.env.ASSETS.fetch(c.req.raw)

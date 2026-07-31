@@ -3,7 +3,7 @@ import { getSignedCookie, deleteCookie } from 'hono/cookie'
 import { SessionService } from '../services/session.service'
 import { handleOAuthCallback, requireSecrets } from '../utils/auth'
 import { initiateAuth } from '../services/auth.service'
-import { SAFE_AUTH_ERROR, logSafeError } from '../utils/errors'
+import { SAFE_AUTH_ERROR, SAFE_CONFIG_ERROR, logSafeError } from '../utils/errors'
 import type { HonoEnv } from '../types'
 
 export function createAuthRoutes(): Hono<HonoEnv> {
@@ -14,7 +14,19 @@ export function createAuthRoutes(): Hono<HonoEnv> {
       const url = await initiateAuth(c)
       return c.redirect(url)
     } catch (err) {
-      logSafeError('auth.login', err, { requestId: c.get('requestId') })
+      const msg = err instanceof Error ? err.message : String(err)
+      logSafeError('auth.login', err, { requestId: c.get('requestId'), reason: msg.slice(0, 80) })
+      // Misconfiguration (empty REDIRECT_URI / CLIENT_ID) — not a user auth failure.
+      if (
+        msg.includes('missing_redirect_uri') ||
+        msg.includes('missing_client_id') ||
+        msg.includes('REDIRECT_URI')
+      ) {
+        return c.text(
+          `${SAFE_CONFIG_ERROR} Set REDIRECT_URI to https://<worker>/callback/plugin and redeploy (re-run quickstart).`,
+          503
+        )
+      }
       return c.text(SAFE_AUTH_ERROR, 500)
     }
   })

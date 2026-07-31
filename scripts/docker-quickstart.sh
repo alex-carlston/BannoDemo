@@ -314,26 +314,67 @@ deploy_worker() {
   local url
   url="$(grep -Eo 'https://[a-zA-Z0-9.-]+\.workers\.dev' "$out_file" | head -n1 || true)"
   rm -f "$out_file"
-  if [[ -n "$url" ]]; then
-    ok "Worker URL: $url"
-    local callback="${url}/callback/plugin"
-    if [[ -z "${REDIRECT_URI:-}" || "$REDIRECT_URI" != "$callback" ]]; then
-      step "Updating REDIRECT_URI to deployed callback"
-      set_env_var REDIRECT_URI "$callback"
-      write_secrets_file
-      npx --yes wrangler deploy --minify \
-        --var "CLIENT_ID:${CLIENT_ID}" \
-        --var "ENV_URI:${ENV_URI}" \
-        --var "REDIRECT_URI:${callback}" \
-        --var "ENVIRONMENT:production" \
-        --var "PLUGIN_INITIAL_HEIGHT:600" \
-        --secrets-file "$SECRETS_FILE"
-      ok "Redeployed with REDIRECT_URI=$callback"
-    fi
-    pause_for_jackhenry_callback "$url" "$callback"
-  else
+  if [[ -z "$url" ]]; then
     warn "Could not parse workers.dev URL from deploy output — set REDIRECT_URI in .env manually."
+    return 0
   fi
+
+  ok "Worker URL: $url"
+  local callback="${url}/callback/plugin"
+
+  # Always redeploy WITH REDIRECT_URI. First pass may have left it empty → /auth/login 500.
+  if [[ "${REDIRECT_URI:-}" != "$callback" ]]; then
+    step "Setting REDIRECT_URI on Worker (required for login)"
+    set_env_var REDIRECT_URI "$callback"
+  else
+    set_env_var REDIRECT_URI "$callback"
+  fi
+  write_secrets_file
+  npx --yes wrangler deploy --minify \
+    --var "CLIENT_ID:${CLIENT_ID}" \
+    --var "ENV_URI:${ENV_URI}" \
+    --var "REDIRECT_URI:${callback}" \
+    --var "ENVIRONMENT:production" \
+    --var "PLUGIN_INITIAL_HEIGHT:600" \
+    --secrets-file "$SECRETS_FILE"
+  ok "Redeployed with REDIRECT_URI=$callback"
+
+  verify_login_ready "$url" "$callback"
+  pause_for_jackhenry_callback "$url" "$callback"
+}
+
+verify_login_ready() {
+  local worker_url="$1"
+  local callback="$2"
+  step "Verifying /auth/login (must redirect, not 500)"
+  local code
+  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "${worker_url}/auth/login" || echo '000')"
+  if [[ "$code" == "302" ]] || [[ "$code" == "301" ]]; then
+    ok "/auth/login → $code (OAuth redirect). Worker config looks good."
+    return 0
+  fi
+  fail "/auth/login returned HTTP $code (expected 302)."
+  cat <<EOF
+
+  The Worker is up, but login is misconfigured (usually empty REDIRECT_URI).
+  Expected REDIRECT_URI:
+       $callback
+
+  Re-run quickstart, or from a machine with wrangler auth:
+    npx wrangler deploy --minify \\
+      --var CLIENT_ID:${CLIENT_ID} \\
+      --var ENV_URI:${ENV_URI} \\
+      --var REDIRECT_URI:${callback} \\
+      --var ENVIRONMENT:production \\
+      --var PLUGIN_INITIAL_HEIGHT:600 \\
+      --secrets-file <secrets>
+
+  Do NOT set the Jack Henry plugin URL to /auth/login.
+  Plugin / first redirect URI must be:
+       $callback
+
+EOF
+  exit 1
 }
 
 pause_for_jackhenry_callback() {
@@ -364,9 +405,14 @@ pause_for_jackhenry_callback() {
   Redirect URI (External application) — must be FIRST in the list:
        $callback
 
-  Plugin URL (plugin configuration) — base URL, no path:
+  Plugin URL (plugin configuration) — use the CALLBACK path as the first
+  redirect URI above. Do NOT use /auth/login as the plugin / redirect URL.
+  Base Worker host (for docs / bookmarks only):
        $worker_url
   Initial height: 600
+
+  After Save, open this check in a browser (should say ok:true):
+       $worker_url/__setup
 
   --- Dashboard clicks ---
 

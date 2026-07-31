@@ -72,6 +72,21 @@ Sign-in should complete and the Pulse UI should load inside the card.
 
 ---
 
+### Exact URLs for your Worker
+
+After deploy, use these shapes (replace the host with yours):
+
+| Where | Value |
+|-------|--------|
+| Jack Henry **Redirect URI** (first in list) | `https://banno-pulse.<account>.workers.dev/callback/plugin` |
+| Jack Henry **Plugin URL** | Same callback URL is what Banno loads as the card face (first redirect URI). Some UIs also ask for a base host — use `https://banno-pulse.<account>.workers.dev` without a path only if the field is labeled host/base. Prefer the full `/callback/plugin` as the first redirect. |
+| Do **not** use | `…/auth/login` as the redirect or plugin entry |
+
+Check config (no secrets): open `https://banno-pulse.<account>.workers.dev/__setup`  
+If `ok` is false or `/auth/login` returns 500/503, `REDIRECT_URI` was not deployed — re-run quickstart.
+
+---
+
 ## If auth still fails
 
 | Check | Fix |
