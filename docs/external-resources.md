@@ -26,7 +26,7 @@ Pulse-specific wiring for Garden redirects and credentials: [setup-banno.md](./s
 | Project | Role |
 |---------|------|
 | [BannoCloudflarePublic](https://github.com/alex-carlston/BannoCloudflarePublic) | Earlier public sample: Hono + Banno OAuth/PKCE on Cloudflare Workers (KV sessions, plugin callback). **Banno Pulse builds on that lineage.** Authored by [Alex Carlston](https://github.com/alex-carlston) (same author as this repo). |
-| This repo (**Banno Pulse**) | Full financial-wellness plugin sample: same OAuth kit, plus dashboard UI, Consumer API usage, D1 goals, deploy scripts, Docker toolbox, and Cursor-first docs. |
+| This repo (**Banno Pulse**) | Full financial-wellness plugin sample: same OAuth kit, plus dashboard UI, Consumer API usage, D1 goals, and Docker quickstart (`.env` → Cloudflare). |
 
 When you reuse or fork either project, keep the MIT license notice and credit the upstream sample where you derived auth/session patterns.
 

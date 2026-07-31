@@ -20,15 +20,15 @@ Plugin Framework: [https://jackhenry.dev/open-api-docs/plugins/](https://jackhen
 | Generate / configure a plugin | Plugin card shown in Garden |
 | Build external application | **Client ID**, **Client Secret**, redirect URI fields |
 
-Paste **Client ID** and **Client Secret** into the Docker quickstart when prompted (stored in **`.env`**).
+Put **Client ID** and **Client Secret** in **`.env`** before `./quickstart.sh` (see [README](../README.md)). The script only prompts if those fields are still blank.
 
-Garden base URL for this sample:
+Garden (sample FI) — enroll your test user here and open the plugin after deploy:
 
 ```text
 https://digital.garden-fi.com
 ```
 
-That is `ENV_URI`.
+That URL is `ENV_URI` in `.env` (already the default in `.env.example`).
 
 ---
 

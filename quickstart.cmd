@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 
 where docker >nul 2>&1
@@ -26,24 +26,15 @@ if not exist ".env" (
   exit /b 1
 )
 
-findstr /B /C:"CLIENT_ID=" .env | findstr /V /C:"CLIENT_ID=$" >nul
-if errorlevel 1 (
-  echo Missing CLIENT_ID in .env — edit .env and re-run.
-  exit /b 1
-)
-findstr /B /C:"CLIENT_SECRET=" .env | findstr /V /C:"CLIENT_SECRET=$" >nul
-if errorlevel 1 (
-  echo Missing CLIENT_SECRET in .env — edit .env and re-run.
-  exit /b 1
-)
-findstr /B /C:"SESSION_ENC_SECRET=" .env | findstr /V /C:"SESSION_ENC_SECRET=$" >nul
-if errorlevel 1 (
-  echo Missing SESSION_ENC_SECRET in .env — edit .env and re-run.
-  exit /b 1
-)
-findstr /B /C:"COOKIE_SIGNING_SECRET=" .env | findstr /V /C:"COOKIE_SIGNING_SECRET=$" >nul
-if errorlevel 1 (
-  echo Missing COOKIE_SIGNING_SECRET in .env — edit .env and re-run.
+set "MISSING=0"
+call :require_env CLIENT_ID
+call :require_env CLIENT_SECRET
+call :require_env SESSION_ENC_SECRET
+call :require_env COOKIE_SIGNING_SECRET
+if "!MISSING!"=="1" (
+  echo.
+  echo Edit .env ^(from .env.example^), set every required field, save, then re-run quickstart.cmd
+  echo Generate secrets with:  openssl rand -base64 32
   exit /b 1
 )
 
@@ -53,3 +44,15 @@ echo.
 
 docker compose run --rm quickstart
 exit /b %ERRORLEVEL%
+
+:require_env
+set "KEY=%~1"
+set "VAL="
+for /f "usebackq tokens=1,* delims==" %%A in (`findstr /B /C:"%KEY%=" ".env"`) do (
+  if /I "%%A"=="%KEY%" set "VAL=%%B"
+)
+if "!VAL!"=="" (
+  echo Missing required value in .env: %KEY%
+  set "MISSING=1"
+)
+exit /b 0

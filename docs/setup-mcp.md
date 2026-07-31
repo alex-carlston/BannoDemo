@@ -1,10 +1,10 @@
-# Cloudflare MCP in Cursor
+# Cloudflare MCP in Cursor (optional)
 
-MCP lets Cursor call Cloudflare (docs, Workers bindings, logs, API) while you work on this repo.
+Not required for deploy. The supported path is Docker + `.env` ([README](../README.md)).
 
-Do this **after** Cursor is installed and this folder is open ([README](../README.md) Steps 1–3).
+MCP lets Cursor call Cloudflare (docs, Workers bindings, logs, API) while you work on this repo — useful after the Worker is live.
 
-Official server list: [Cloudflare’s own MCP servers](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/)
+Official server list: [Cloudflare’s MCP servers](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/)
 
 ---
 
@@ -37,33 +37,9 @@ Official server list: [Cloudflare’s own MCP servers](https://developers.cloudf
 
 3. Save  
 4. Click **Connect** / approve **OAuth** for each server that asks  
-5. Choose the **same Cloudflare account** you use with Wrangler  
+5. Choose the **same Cloudflare account** you confirmed during `./quickstart.sh`
 
 Optional: install the Cloudflare plugin / skills from the Cursor marketplace if offered.
-
----
-
-## Match Wrangler to the same account
-
-In the Cursor terminal:
-
-```powershell
-npx wrangler whoami
-```
-
-If that is the wrong account:
-
-```powershell
-# Windows
-.\scripts\setup.ps1 -RefreshAuth
-```
-
-```bash
-# Mac
-./scripts/setup.sh --refresh-auth
-```
-
-Then disconnect + reconnect the MCP servers in Cursor Settings → MCP and OAuth again with the correct account.
 
 ---
 
@@ -73,13 +49,13 @@ Ask Cursor in chat:
 
 - “Using Cloudflare MCP, list Workers in my account.”
 - “Show recent logs for Worker `banno-pulse`.”
-- “List recent Workers Builds for `banno-pulse`.” (uses the builds MCP after you connect Git in the dashboard — see [setup-cloudflare.md](./setup-cloudflare.md) §5 path C)
+- “List recent Workers Builds for `banno-pulse`.” (builds MCP after you connect Git in the dashboard — see [setup-cloudflare.md](./setup-cloudflare.md))
 
-If auth fails, re-run OAuth on the MCP servers and `npx wrangler whoami` again.
+If auth fails, re-run OAuth on the MCP servers.
 
 ---
 
 ## Related
 
-- [../README.md](../README.md) Step 5  
+- [../README.md](../README.md) — supported Docker deploy  
 - [setup-cloudflare.md](./setup-cloudflare.md)  

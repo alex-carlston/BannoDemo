@@ -426,6 +426,7 @@ banno-pulse/
 ├── migrations/0001_create_goals.sql
 ├── public/styles.css
 ├── wrangler.jsonc
+├── .env.example
 ├── .dev.vars.example
 ├── architecture.md
 ├── security.md

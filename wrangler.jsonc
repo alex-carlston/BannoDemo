@@ -9,10 +9,12 @@
     "binding": "ASSETS",
     "run_worker_first": true
   },
+  // Defaults for Garden sample FI. CLIENT_ID / REDIRECT_URI are set at deploy
+  // time by Docker quickstart (`--var` from `.env`). Do not commit real secrets.
   "vars": {
-    "CLIENT_ID": "fe154a86-51ce-47a1-b59e-f0560e71846d",
+    "CLIENT_ID": "",
     "ENV_URI": "https://digital.garden-fi.com",
-    "REDIRECT_URI": "https://banno-pulse.hackathon-16b.workers.dev/callback/plugin",
+    "REDIRECT_URI": "",
     "ENVIRONMENT": "production",
     "PLUGIN_INITIAL_HEIGHT": "600"
   },

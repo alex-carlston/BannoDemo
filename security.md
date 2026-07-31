@@ -103,7 +103,8 @@ Idle timeout and session replacement on re-login also revoke before deleting loc
 | `ENV_URI` / `REDIRECT_URI` | var | FI base URL + callback |
 
 - Secrets never live in `wrangler.jsonc` `vars`
-- Local: `.dev.vars` (gitignored); production: `wrangler secret put …`
+- Docker deploy: values from `.env` (gitignored) uploaded via quickstart `--secrets-file`
+- Optional host local: `.dev.vars` (gitignored); production can also use `wrangler secret put …`
 - `REDIRECT_URI` validated: HTTPS, non-localhost in production, callback path
 - Boot/auth paths reject missing secrets or equal cookie/encryption secrets
 
