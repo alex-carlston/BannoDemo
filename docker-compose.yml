@@ -1,11 +1,47 @@
-# Local “deploy like CI” using the toolchain image.
-# Usage:
+# Banno Pulse — Docker toolbox (deploys TO Cloudflare; does not host the Worker).
+#
+# Video / human quickstart (interactive whoami + login + JH prompts):
+#   cp .env.example .env
+#   docker compose run --rm quickstart
+#
+# CI / token deploy (non-interactive):
 #   export CLOUDFLARE_API_TOKEN=...
-#   export CLOUDFLARE_ACCOUNT_ID=...   # optional if wrangler.jsonc has account_id
 #   docker compose run --rm deploy
+
 services:
+  quickstart:
+    build: .
+    ports:
+      # Cloudflare OAuth callback from host browser → Wrangler in the container
+      - "8976:8976"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
+      # Prefer OAuth login unless the user set a token in `.env`
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+    volumes:
+      # Persist Wrangler OAuth across runs (Linux container paths)
+      - wrangler_auth:/root/.config/.wrangler
+      - wrangler_auth_legacy:/root/.wrangler
+      # Round-trip `.env` edits from prompts back to the host
+      - ./.env:/app/.env
+    stdin_open: true
+    tty: true
+    entrypoint: ["./scripts/docker-quickstart.sh"]
+
   deploy:
     build: .
+    env_file:
+      - path: .env
+        required: false
     environment:
-      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:?set CLOUDFLARE_API_TOKEN}
+      # Validated at runtime by scripts/deploy-ci.sh (not at compose parse time)
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
       CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
+    entrypoint: ["./scripts/deploy-ci.sh"]
+
+volumes:
+  wrangler_auth:
+  wrangler_auth_legacy:

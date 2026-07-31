@@ -1,6 +1,6 @@
-# Deploy toolbox only — does NOT run the Worker.
+# Deploy / quickstart toolbox — does NOT run the Worker.
 # Production runtime is Cloudflare Workers (Wrangler uploads the bundle).
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 
 WORKDIR /app
 
@@ -8,15 +8,17 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Source needed for `wrangler deploy` + D1 migrations
+# Source needed for `wrangler deploy` + D1 migrations + interactive quickstart
 COPY wrangler.jsonc tsconfig.json ./
 COPY src ./src
 COPY public ./public
 COPY migrations ./migrations
-COPY scripts/deploy-ci.sh ./scripts/deploy-ci.sh
+COPY .env.example ./
+COPY scripts/deploy-ci.sh scripts/docker-quickstart.sh ./scripts/
 
-RUN chmod +x ./scripts/deploy-ci.sh
+RUN chmod +x ./scripts/deploy-ci.sh ./scripts/docker-quickstart.sh
 
-# Auth via CLOUDFLARE_API_TOKEN (+ optional CLOUDFLARE_ACCOUNT_ID) at runtime.
+# Auth at runtime: interactive `wrangler login` (quickstart) or CLOUDFLARE_API_TOKEN (CI).
 # Do not bake secrets into the image.
+# Default entrypoint stays CI-safe; compose overrides for quickstart.
 ENTRYPOINT ["./scripts/deploy-ci.sh"]

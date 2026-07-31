@@ -4,7 +4,7 @@
 **Last updated:** July 27, 2026  
 **Runtime:** Cloudflare Workers (edge)  
 **Framework:** Hono v4 with JSX server-side rendering  
-**Related:** [security.md](./security.md) · [README.md](./README.md)
+**Related:** [security.md](./security.md) · [README.md](./README.md) · [docs/external-resources.md](./docs/external-resources.md) (attribution + external links)
 
 ---
 

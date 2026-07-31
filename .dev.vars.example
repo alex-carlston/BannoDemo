@@ -1,6 +1,10 @@
-# Copy to .dev.vars and fill in your Banno OAuth credentials
-# Get these from Banno People (External Application Configuration)
-# Windows: .\scripts\setup.ps1   |   macOS/Linux: ./scripts/setup.sh
+# Copy to `.dev.vars` for **host** local Wrangler (`npm run dev`) only.
+# Get CLIENT_ID / CLIENT_SECRET from the Jack Henry dashboard (external application).
+#
+# Docker quickstart uses a different file: copy `.env.example` → `.env`
+# (see docs/setup-docker.md). Do not mix the two unless you intentionally sync.
+#
+# Windows host setup: .\scripts\setup.ps1   |   macOS/Linux: ./scripts/setup.sh
 
 CLIENT_ID=your-client-id-from-banno-admin
 CLIENT_SECRET=your-client-secret-from-banno-admin

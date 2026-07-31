@@ -39,9 +39,11 @@ Entry export: [`src/plugin/index.ts`](../src/plugin/index.ts)
 
 Complete these first:
 
-1. Main [README](../README.md) Steps 1–8 (Cursor, Node, clone, Jack Henry, MCP, setup, `.dev.vars`, local run)  
-2. [Jack Henry Getting Started](https://jackhenry.dev/open-api-docs/getting-started/)  
-3. Optional deploy: [setup-cloudflare.md](./setup-cloudflare.md)  
+1. Main [README](../README.md) — Docker quickstart ([setup-docker.md](./setup-docker.md))  
+2. [Jack Henry Getting Started](https://jackhenry.dev/open-api-docs/getting-started/) and the [Plugin Framework](https://jackhenry.dev/open-api-docs/plugins/) hub  
+3. Jack Henry callback / plugin card: [setup-banno.md](./setup-banno.md)  
+4. Context / attribution: [external-resources.md](./external-resources.md)  
+5. Optional local only: [host-dev.md](./host-dev.md)  
 
 ---
 

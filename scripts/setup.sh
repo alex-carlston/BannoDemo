@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# LEGACY / UNSUPPORTED for onboarding — use Docker instead:
+#   cp .env.example .env && docker compose run --rm quickstart
+# See README.md and docs/setup-docker.md / docs/host-dev.md
+#
 # First-time (or refresh) setup for Banno Pulse on macOS / Linux.
 # Windows users: prefer scripts/setup.ps1 (or setup.cmd).
 set -euo pipefail

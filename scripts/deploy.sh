@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# LEGACY / UNSUPPORTED for onboarding — use Docker instead:
+#   cp .env.example .env && docker compose run --rm quickstart
+# See README.md and docs/setup-docker.md / docs/host-dev.md
+#
 # Deploy Banno Pulse to Cloudflare Workers (macOS / Linux).
 # Windows users: prefer scripts/deploy.ps1 (or deploy.cmd).
 set -euo pipefail

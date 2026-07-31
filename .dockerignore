@@ -6,6 +6,7 @@ node_modules
 .agents
 .env
 .env.*
+!.env.example
 .dev.vars
 *.log
 .DS_Store
