@@ -30,6 +30,10 @@ services:
       - wrangler_auth_legacy:/root/.wrangler
       # Round-trip `.env` edits from prompts back to the host
       - ./.env:/app/.env
+      # Write callback-url.txt / worker-url.txt onto the host clone (not only the image FS)
+      - .:/host-repo
+      # Always use the host script so `git pull` applies without rebuild
+      - ./scripts/docker-quickstart.sh:/app/scripts/docker-quickstart.sh:ro
     stdin_open: true
     tty: true
     entrypoint: ["./scripts/docker-quickstart.sh"]

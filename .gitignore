@@ -6,6 +6,8 @@ node_modules/
 !.env.example
 .dev.vars
 !.dev.vars.example
+callback-url.txt
+worker-url.txt
 dist/
 *.log
 .DS_Store

@@ -7,7 +7,17 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# Host clone mount from docker-compose (`.:/host-repo`) so we can write copy-paste files.
+HOST_REPO="${HOST_REPO:-/host-repo}"
+if [[ ! -d "$HOST_REPO" ]]; then
+  HOST_REPO="$REPO_ROOT"
+fi
+
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/.env}"
+# Prefer writing .env through the host mount when present (same inode as host file).
+if [[ -d /host-repo ]]; then
+  ENV_FILE="/host-repo/.env"
+fi
 SECRETS_FILE="$(mktemp)"
 trap 'rm -f "$SECRETS_FILE"' EXIT
 
@@ -43,12 +53,19 @@ load_env_file() {
 }
 
 # Upsert KEY=VALUE in .env (create file from example if needed).
+# If the host editor has .env locked or the bind mount is missing, warn but continue
+# (deploy still uses in-memory exports).
 set_env_var() {
   local key="$1"
   local val="$2"
   local tmp
   tmp="$(mktemp)"
-  touch "$ENV_FILE"
+  if ! touch "$ENV_FILE" 2>/dev/null; then
+    warn "Cannot write $ENV_FILE (close the editor / check Docker mount). Continuing with in-memory $key."
+    export "$key=$val"
+    rm -f "$tmp"
+    return 0
+  fi
   if grep -qE "^${key}=" "$ENV_FILE" 2>/dev/null; then
     # Avoid sed -i portability issues inside the container.
     awk -v k="$key" -v v="$val" '
@@ -56,10 +73,22 @@ set_env_var() {
       $0 ~ "^"k"=" { print k"="v; done=1; next }
       { print }
       END { if (!done) print k"="v }
-    ' "$ENV_FILE" > "$tmp"
-    mv "$tmp" "$ENV_FILE"
+    ' "$ENV_FILE" > "$tmp" || {
+      warn "Failed updating $key in .env — value still used for this deploy."
+      export "$key=$val"
+      rm -f "$tmp"
+      return 0
+    }
+    if ! mv "$tmp" "$ENV_FILE" 2>/dev/null; then
+      warn "Could not replace .env (is it open/locked on the host?). Deploy still uses $key."
+      rm -f "$tmp"
+      export "$key=$val"
+      return 0
+    fi
   else
-    printf '%s=%s\n' "$key" "$val" >> "$ENV_FILE"
+    if ! printf '%s=%s\n' "$key" "$val" >> "$ENV_FILE" 2>/dev/null; then
+      warn "Could not append $key to .env. Deploy still uses in-memory value."
+    fi
     rm -f "$tmp"
   fi
   export "$key=$val"
@@ -310,30 +339,56 @@ deploy_worker() {
 pause_for_jackhenry_callback() {
   local worker_url="$1"
   local callback="$2"
+
+  # Plain files on the host clone for copy/paste (avoids fighting an open `.env` editor).
+  printf '%s\n' "$callback" > "$HOST_REPO/callback-url.txt" || true
+  printf '%s\n' "$worker_url" > "$HOST_REPO/worker-url.txt" || true
+  # Also try image workdir (harmless if not mounted back).
+  printf '%s\n' "$callback" > "$REPO_ROOT/callback-url.txt" 2>/dev/null || true
+  printf '%s\n' "$worker_url" > "$REPO_ROOT/worker-url.txt" 2>/dev/null || true
+
   cat <<EOF
 
 ========================================================================
-  REQUIRED — paste into Jack Henry (dashboard)
+  STOP — finish Jack Henry BEFORE opening Garden
 ========================================================================
 
-  1) Open: https://jackhenry.dev/portal/dashboard
+  Auth fails with "Authentication failed. Please try signing in again."
+  until the redirect URI is saved in the dashboard (exact match, FIRST in list).
 
-  2) External application → Redirect URI (exact):
+  You do NOT need to paste this into .env yourself. Quickstart already set
+  REDIRECT_URI on the Worker. Paste it into Jack Henry only.
+
+  --- Copy these (also written to callback-url.txt / worker-url.txt) ---
+
+  Redirect URI (External application) — must be FIRST in the list:
        $callback
 
-  3) Plugin configuration:
-       Plugin URL  →  $worker_url
-       Initial height → 600
+  Plugin URL (plugin configuration) — base URL, no path:
+       $worker_url
+  Initial height: 600
 
-  4) Save, then open Garden as your test user and launch the plugin.
+  --- Dashboard clicks ---
+
+  1) https://jackhenry.dev/portal/dashboard
+  2) External application (same Client ID as .env)
+       → Redirect URI(s) → paste the Redirect URI above
+       → Move it to the TOP if anything else is listed (e.g. localhost)
+       → Save
+  3) Plugin configuration
+       → Plugin URL = Worker base URL above
+       → Initial height = 600
+       → Save
+  4) ONLY THEN open Garden as your test user and launch the plugin:
+       https://digital.garden-fi.com
 
   Guide: docs/setup-banno.md
 ========================================================================
 
 EOF
-  printf 'Press Enter after you have pasted the redirect URI into Jack Henry… '
+  printf 'Press Enter AFTER you have Saved the redirect URI (and plugin) in Jack Henry… '
   read -r _ || true
-  ok "Continuing"
+  ok "Dashboard step acknowledged — open Garden now if you have not already"
 }
 
 maybe_sync_dev_vars() {

@@ -91,7 +91,9 @@ Leave blank for now:
 
 - `CLOUDFLARE_API_TOKEN` — empty = interactive `wrangler login` inside Docker
 - `CLOUDFLARE_ACCOUNT_ID` — optional
-- `REDIRECT_URI` — empty on first deploy; quickstart writes your `…/callback/plugin` URL
+- `REDIRECT_URI` — **leave blank**; after deploy paste the callback into **Jack Henry**, not into `.env`
+
+If paste into `.env` fails in Cursor on Mac: close the tab, run `open -e .env`, paste in TextEdit, save.
 
 ### Generate the two secrets
 
@@ -171,22 +173,34 @@ That means the OAuth callback never reached Wrangler (common with an older `dock
 
 ---
 
-## 5. Paste the callback into Jack Henry
+## 5. Paste the callback into Jack Henry (not into `.env`)
 
-The script prints something like:
+Quickstart prints something like:
 
 ```text
 https://banno-pulse.<your-subdomain>.workers.dev/callback/plugin
 ```
 
-1. Open https://jackhenry.dev/portal/dashboard  
-2. External application → **redirect URI** = that exact URL  
-3. Plugin configuration → plugin URL = `https://banno-pulse.<your-subdomain>.workers.dev` · **Initial height = 600**  
-4. Save  
-5. Press Enter in the terminal  
-6. Garden → test user → open the plugin  
+(Also written to `callback-url.txt` in the repo folder for easy copy.)
 
-Details: [docs/setup-banno.md](./docs/setup-banno.md)
+**Do not paste that into `.env` yourself** — the Worker already has `REDIRECT_URI`. Paste it into the **Jack Henry dashboard**, then open Garden.
+
+1. https://jackhenry.dev/portal/dashboard  
+2. **External application** (same Client ID as `.env`) → **Redirect URI** = that exact URL  
+3. Make sure it is the **first** redirect URI in the list (if `localhost` is first, Garden will fail auth)  
+4. **Save**  
+5. Plugin configuration → plugin URL = `https://banno-pulse.<your-subdomain>.workers.dev` (no path) · **Initial height = 600** · **Save**  
+6. Press Enter in the terminal  
+7. **Only then** Garden → test user → open the plugin  
+
+If you see **Authentication failed. Please try signing in again.**, the redirect URI is missing, mistyped, or not first — see [docs/setup-banno.md](./docs/setup-banno.md).
+
+### Editing `.env` on Mac
+
+- Fill `CLIENT_ID` / `CLIENT_SECRET` / secrets **before** `./quickstart.sh`, with Docker stopped.  
+- If the editor will not accept paste: close the file, run `open -e .env` (TextEdit), paste, save, reopen in Cursor if you want.  
+- Leave `REDIRECT_URI=` blank on first run.  
+- Close `.env` in the editor before quickstart finishes (it may update `REDIRECT_URI` on disk).
 
 ---
 
