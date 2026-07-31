@@ -107,6 +107,7 @@ See [host-dev.md](./host-dev.md) — not onboarding.
 | Symptom | Fix |
 |---------|-----|
 | Docker not running | Start Docker Desktop; `docker version` |
+| `localhost:8976` connection refused after Cloudflare approve | Re-run quickstart (`--service-ports`). Do not reuse an old callback URL. Or use `CLOUDFLARE_API_TOKEN` |
 | Login check after quickstart looked failed | Old bug: image has no `curl`. Pull latest; check is Node-based and non-fatal if deploy worked |
 | GitHub Action red X on push | Optional CI — add `CLOUDFLARE_API_TOKEN` or ignore; workflow now skips cleanly without it |
 | Login hangs | Open the **new** printed OAuth URL on the **host**; leave the terminal open until callback succeeds |
