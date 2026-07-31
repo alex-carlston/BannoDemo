@@ -434,11 +434,11 @@ pause_for_jackhenry_callback() {
   Redirect URI (External application) — must be FIRST in the list:
        $callback
 
-  Plugin URL (plugin configuration) — use the CALLBACK path as the first
-  redirect URI above. Do NOT use /auth/login as the plugin / redirect URL.
-  Base Worker host (for docs / bookmarks only):
+  Plugin URL (plugin configuration) — base host, no path:
        $worker_url
   Initial height: 600
+
+  Do NOT use /auth/login. Do NOT use the base host alone as the Redirect URI.
 
   After Save, open this check in a browser (should say ok:true):
        $worker_url/__setup

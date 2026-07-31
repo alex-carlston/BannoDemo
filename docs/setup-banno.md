@@ -79,8 +79,9 @@ After deploy, use these shapes (replace the host with yours):
 | Where | Value |
 |-------|--------|
 | Jack Henry **Redirect URI** (first in list) | `https://banno-pulse.<account>.workers.dev/callback/plugin` |
-| Jack Henry **Plugin URL** | Same callback URL is what Banno loads as the card face (first redirect URI). Some UIs also ask for a base host — use `https://banno-pulse.<account>.workers.dev` without a path only if the field is labeled host/base. Prefer the full `/callback/plugin` as the first redirect. |
-| Do **not** use | `…/auth/login` as the redirect or plugin entry |
+| Jack Henry **Plugin URL** | `https://banno-pulse.<account>.workers.dev` (base host, no path) |
+| **Initial height** | `600` |
+| Do **not** use | Base host alone as Redirect URI, or `…/auth/login` anywhere |
 
 Check config (no secrets): open `https://banno-pulse.<account>.workers.dev/__setup`  
 If `ok` is false or `/auth/login` returns 500/503, `REDIRECT_URI` was not deployed — re-run quickstart.

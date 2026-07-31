@@ -2,7 +2,7 @@
 
 Banno Online Banking plugin on **Cloudflare Workers**.
 
-**Deploy path:** clone → put credentials in `.env` → Docker deploys to Cloudflare → paste the callback into Jack Henry.
+**Deploy path:** clone → put credentials in `.env` → Docker deploys to Cloudflare → paste the callback into Jack Henry → open Garden.
 
 Repo: https://github.com/alex-carlston/BannoDemo
 
@@ -14,108 +14,74 @@ Repo: https://github.com/alex-carlston/BannoDemo
 
 | Need | Link |
 |------|------|
-| **Docker Desktop** installed and **running** (Windows, macOS, or Linux) | https://www.docker.com/products/docker-desktop/ |
+| **Docker Desktop** installed and **running** | https://www.docker.com/products/docker-desktop/ |
 | Cloudflare account | https://dash.cloudflare.com/sign-up |
 | Jack Henry Getting Started finished (test user, plugin, external app) | https://jackhenry.dev/open-api-docs/getting-started/ |
-| Client ID + Client Secret from the dashboard | https://jackhenry.dev/portal/dashboard |
-| An editor to edit `.env` (Cursor, VS Code, Notepad, etc.) | — |
+| Client ID + Client Secret | https://jackhenry.dev/portal/dashboard |
+| An editor for `.env` (Cursor, VS Code, Notepad, TextEdit, etc.) | — |
 
 You do **not** need Node.js on the host. Docker runs Wrangler.
 
-Garden (sample FI): `https://digital.garden-fi.com`
+Garden (sample FI): https://digital.garden-fi.com
 
-### Windows (Docker Desktop)
-
-1. Install Docker Desktop for Windows and finish setup (WSL 2 backend is the default — accept it).
-2. Start **Docker Desktop** and wait until it says **Engine running**.
-3. Open **PowerShell** or **Command Prompt** (or the terminal in Cursor / VS Code).
-4. Confirm:
+**Windows:** Install Docker Desktop (WSL 2 is fine), start it until **Engine running**, then confirm in PowerShell:
 
 ```powershell
 docker version
 docker compose version
 ```
 
-If either fails, Docker is not installed or not running yet.
-
 ---
 
 ## 2. Clone
-
-**Windows (PowerShell / cmd):**
-
-```powershell
-git clone https://github.com/alex-carlston/BannoDemo.git
-cd BannoDemo
-```
-
-**macOS / Linux:**
 
 ```bash
 git clone https://github.com/alex-carlston/BannoDemo.git
 cd BannoDemo
 ```
 
-Every command below runs **inside** that folder.
+(Windows PowerShell: same commands.)
 
 ---
 
 ## 3. Create `.env` and fill in real values
 
-**Windows:**
-
-```powershell
-copy .env.example .env
-notepad .env
-```
-
-(Or open `.env` in Cursor / VS Code.)
-
-**macOS / Linux:**
-
 ```bash
+# macOS / Linux
 cp .env.example .env
+
+# Windows
+copy .env.example .env
 ```
 
-Set these **before** you deploy:
+Open `.env` and set these **before** deploy:
 
 | Variable | What to put |
 |----------|-------------|
-| `CLIENT_ID` | From Jack Henry → external application |
-| `CLIENT_SECRET` | From Jack Henry → external application |
-| `ENV_URI` | Garden base URL (default is fine: `https://digital.garden-fi.com`) |
-| `SESSION_ENC_SECRET` | Random secret (generate below) |
-| `COOKIE_SIGNING_SECRET` | **Different** random secret (generate below) |
+| `CLIENT_ID` | Jack Henry → external application |
+| `CLIENT_SECRET` | Jack Henry → external application |
+| `ENV_URI` | Leave default: `https://digital.garden-fi.com` |
+| `SESSION_ENC_SECRET` | Random (generate below) |
+| `COOKIE_SIGNING_SECRET` | **Different** random value |
 
-Leave blank for now:
+Leave blank:
 
-- `CLOUDFLARE_API_TOKEN` — empty = interactive `wrangler login` inside Docker
-- `CLOUDFLARE_ACCOUNT_ID` — optional
-- `REDIRECT_URI` — **leave blank**; after deploy paste the callback into **Jack Henry**, not into `.env`
+| Variable | Why |
+|----------|-----|
+| `REDIRECT_URI` | Quickstart fills the full `…/callback/plugin` URL after deploy |
+| `CLOUDFLARE_API_TOKEN` | Empty = interactive Cloudflare login in Docker |
+| `CLOUDFLARE_ACCOUNT_ID` | Optional |
 
-If paste into `.env` fails in Cursor on Mac: close the tab, run `open -e .env`, paste in TextEdit, save.
+Generate secrets (run twice; paste two different values):
 
-### Generate the two secrets
+```bash
+# macOS / Linux
+openssl rand -base64 32
 
-**Windows (PowerShell)** — run twice; paste **different** values:
-
-```powershell
-[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }) -as [byte[]])
-```
-
-Or (cryptographically stronger):
-
-```powershell
+# Windows PowerShell
 $b = New-Object byte[] 32
 [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
 [Convert]::ToBase64String($b)
-```
-
-**macOS / Linux:**
-
-```bash
-openssl rand -base64 32
-openssl rand -base64 32
 ```
 
 Example:
@@ -131,76 +97,65 @@ CLOUDFLARE_API_TOKEN=
 CLOUDFLARE_ACCOUNT_ID=
 ```
 
-**Do not commit `.env`.** It is gitignored. Quickstart **exits** if required values are empty.
+**Do not** put only the Worker base host in `REDIRECT_URI` (that breaks login). Leave it empty and let quickstart set the full callback.
+
+**Do not commit `.env`.** Quickstart exits if required values are empty.
+
+If Cursor will not paste into `.env` on Mac: `open -e .env`, edit in TextEdit, save.
 
 ---
 
 ## 4. Deploy with Docker
 
-**Windows** (from the `BannoDemo` folder):
-
-```powershell
-.\quickstart.cmd
-```
-
-**macOS / Linux:**
-
 ```bash
-chmod +x ./quickstart.sh
+# macOS / Linux
 ./quickstart.sh
+
+# Windows
+.\quickstart.cmd
 ```
 
 What happens:
 
 1. Checks Docker is running  
-2. Loads your `.env` values  
-3. If needed, prints a Cloudflare login URL — open it in **Edge/Chrome on the host**  
-4. After you approve, Cloudflare redirects to `http://localhost:8976/...` (Docker publishes that port)  
-5. Asks you to **confirm** the Cloudflare account (`Y` / `n`)  
-6. Deploys the Worker, applies D1 migrations, uploads secrets  
-7. Prints your Jack Henry callback URL and waits  
+2. Loads `.env`  
+3. Cloudflare login if needed (open the printed URL in your browser; callback uses host port **8976**)  
+4. Confirm the Cloudflare account (`Y` / `n`)  
+5. Deploys the Worker, D1 migrations, and secrets  
+6. Sets `REDIRECT_URI` to `https://banno-pulse.<your-subdomain>.workers.dev/callback/plugin`  
+7. Prints that callback and waits for you to update Jack Henry  
 
-### If `localhost:8976` fails to connect
-
-That means the OAuth callback never reached Wrangler (common with an older `docker compose run` that did not publish ports).
-
-1. Close the browser tab  
-2. In the terminal: **Ctrl+C**  
-3. Pull the latest repo (or re-clone), then run **`.\quickstart.cmd`** / **`./quickstart.sh` again** (these now pass `--service-ports`)  
-4. Open the **new** login URL Wrangler prints — do not reuse an old callback URL  
-
-**Token fallback (no browser callback):** create an API token at https://dash.cloudflare.com/profile/api-tokens with Workers + D1 + KV edit, put it in `.env` as `CLOUDFLARE_API_TOKEN=...`, leave interactive login unused, and re-run quickstart (or `docker compose run --rm deploy`).
+If `localhost:8976` fails after Cloudflare approve: Ctrl+C, re-run quickstart (it publishes the port). Or set `CLOUDFLARE_API_TOKEN` in `.env` and re-run (no browser login).
 
 ---
 
-## 5. Paste the callback into Jack Henry (not into `.env`)
+## 5. Finish in Jack Henry, then open Garden
 
-Quickstart prints something like:
+Quickstart prints (and writes `callback-url.txt`):
 
 ```text
 https://banno-pulse.<your-subdomain>.workers.dev/callback/plugin
 ```
 
-(Also written to `callback-url.txt` in the repo folder for easy copy.)
+Paste that into **Jack Henry**, not into `.env`.
 
-**Do not paste that into `.env` yourself** — the Worker already has `REDIRECT_URI`. Paste it into the **Jack Henry dashboard**, then open Garden.
+| Dashboard field | Exact value |
+|-----------------|-------------|
+| **External application → Redirect URI** (must be **first** in the list) | `https://banno-pulse.<your-subdomain>.workers.dev/callback/plugin` |
+| **Plugin configuration → Plugin URL** | `https://banno-pulse.<your-subdomain>.workers.dev` (base host, no path) |
+| **Initial height** | `600` |
+
+Steps:
 
 1. https://jackhenry.dev/portal/dashboard  
-2. **External application** (same Client ID as `.env`) → **Redirect URI** = that exact URL  
-3. Make sure it is the **first** redirect URI in the list (if `localhost` is first, Garden will fail auth)  
-4. **Save**  
-5. Plugin configuration → plugin URL = `https://banno-pulse.<your-subdomain>.workers.dev` (no path) · **Initial height = 600** · **Save**  
-6. Press Enter in the terminal  
-7. **Only then** Garden → test user → open the plugin  
+2. Same external app as your `CLIENT_ID` → set Redirect URI → **Save**  
+3. Plugin → Plugin URL + height **600** → **Save**  
+4. Press Enter in the quickstart terminal  
+5. Garden → test user → open the plugin: https://digital.garden-fi.com  
 
-If you see **Authentication failed. Please try signing in again.**, the redirect URI is missing, mistyped, or not first — see [docs/setup-banno.md](./docs/setup-banno.md).
+Optional check: `https://banno-pulse.<your-subdomain>.workers.dev/__setup` should show `"ok": true`.
 
-### Editing `.env` on Mac
-
-- Fill `CLIENT_ID` / `CLIENT_SECRET` / secrets **before** `./quickstart.sh`, with Docker stopped.  
-- If the editor will not accept paste: close the file, run `open -e .env` (TextEdit), paste, save, reopen in Cursor if you want.  
-- Leave `REDIRECT_URI=` blank on first run.  
-- Close `.env` in the editor before quickstart finishes (it may update `REDIRECT_URI` on disk).
+If you see **Authentication failed. Please try signing in again.**, the Redirect URI is wrong, missing `/callback/plugin`, or not first in the list — details in [docs/setup-banno.md](./docs/setup-banno.md).
 
 ---
 
@@ -210,10 +165,10 @@ If you see **Authentication failed. Please try signing in again.**, the redirect
 - [ ] Cloudflare account exists  
 - [ ] Jack Henry Getting Started finished; Client ID / Secret in hand  
 - [ ] `git clone` + `cd BannoDemo`  
-- [ ] Copied `.env.example` → `.env` and filled required fields  
-- [ ] `.\quickstart.cmd` (Windows) or `./quickstart.sh` completed; account confirmed  
-- [ ] Redirect URI + plugin card updated in Jack Henry  
-- [ ] Plugin opens in Garden (`https://digital.garden-fi.com`)  
+- [ ] `.env` filled (`REDIRECT_URI` left blank)  
+- [ ] `./quickstart.sh` or `.\quickstart.cmd` completed  
+- [ ] Jack Henry Redirect URI = full `…/callback/plugin` (first) + plugin height 600  
+- [ ] Plugin opens in Garden  
 
 ---
 
@@ -221,12 +176,12 @@ If you see **Authentication failed. Please try signing in again.**, the redirect
 
 | Doc | When |
 |-----|------|
-| [docs/setup-docker.md](./docs/setup-docker.md) | Windows + macOS detail, OAuth port troubleshooting |
+| [docs/setup-docker.md](./docs/setup-docker.md) | Extra Docker / port 8976 detail |
 | [docs/setup-banno.md](./docs/setup-banno.md) | Garden + Jack Henry redirect / plugin card |
-| [docs/setup-cloudflare.md](./docs/setup-cloudflare.md) | Token re-deploy, Workers Builds, Actions |
-| [docs/setup-mcp.md](./docs/setup-mcp.md) | Optional: Cloudflare MCP in Cursor |
+| [docs/setup-cloudflare.md](./docs/setup-cloudflare.md) | Token re-deploy, Workers Builds, optional Actions |
+| [docs/setup-mcp.md](./docs/setup-mcp.md) | Optional Cloudflare MCP in Cursor |
 | [docs/external-resources.md](./docs/external-resources.md) | Attribution + external links |
-| [docs/host-dev.md](./docs/host-dev.md) | Optional local Node (uses `.dev.vars`, not required) |
+| [docs/host-dev.md](./docs/host-dev.md) | Optional local Node (`.dev.vars`) |
 
 ## Attribution
 
